@@ -31,7 +31,15 @@ private fun karla(weight: FontWeight) = Font(
  * they render is the browser's fallback. This is that fallback made deliberate, subset from Inter
  * to the single glyph it is needed for.
  */
+/**
+ * Half a step below ExtraLight, which is as fine as the wordmark asks for.
+ *
+ * Inter runs a touch heavier than Karla at the same nominal weight, and its axis goes down to 100.
+ */
+val TurnedVWeight = FontWeight(150)
+
 val TurnedV = FontFamily(
+    turnedV(TurnedVWeight),
     turnedV(FontWeight.ExtraLight),
     turnedV(FontWeight.Light),
     turnedV(FontWeight.Normal),

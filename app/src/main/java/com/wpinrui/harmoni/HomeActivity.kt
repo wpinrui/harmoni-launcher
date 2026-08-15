@@ -12,6 +12,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.wpinrui.harmoni.app.SettingsRestart
 import com.wpinrui.harmoni.context.MotionMonitor
 import com.wpinrui.harmoni.context.hasMotionPermission
 import com.wpinrui.harmoni.home.HomePresses
@@ -69,5 +70,17 @@ class HomeActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         HomePresses.record()
+    }
+
+    /**
+     * Coming home is where a settings change is picked up.
+     *
+     * The stores are read once at process start, so a change made on the launcher app screen does
+     * not reach the surfaces already built on them. Restarting here costs nothing: the system
+     * relaunches the home app immediately and there is nothing on screen to lose.
+     */
+    override fun onResume() {
+        super.onResume()
+        SettingsRestart.applyIfPending()
     }
 }

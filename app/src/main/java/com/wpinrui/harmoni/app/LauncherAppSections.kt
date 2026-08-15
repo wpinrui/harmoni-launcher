@@ -1,5 +1,6 @@
 package com.wpinrui.harmoni.app
 
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -8,8 +9,9 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -17,9 +19,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.wpinrui.harmoni.apps.AppEntry
+import com.wpinrui.harmoni.apps.AppIcon
 import com.wpinrui.harmoni.context.ContextApps
 import com.wpinrui.harmoni.context.ContextualRules
 import com.wpinrui.harmoni.graffiti.GraffitiLetters
@@ -33,40 +39,79 @@ import java.time.Duration
 /**
  * The eight fixed positions, in the order the ring lays them out.
  *
- * Position leads the row rather than being implied by order: the ring is muscle memory, and
- * remembering which way is which is usually the reason to open this screen.
+ * Position is the binding, so it is named rather than implied: the ring is muscle memory, and the
+ * reason to read this screen is usually to remember which way is which.
  */
 internal fun LazyListScope.ringBindingRows(
     entries: List<AppEntry>,
-    slots: List<RingTarget>,
+    slots: List<RingTarget?>,
     showInSearch: Boolean,
     onEdit: (Int) -> Unit,
     onToggleSearch: (Boolean) -> Unit,
 ) {
     itemsIndexed(slots) { index, target ->
-        val installed = entries.any { it.packageName == target.iconPackage }
+        val installed = target != null && entries.any { it.packageName == target.iconPackage }
 
-        Row2(
-            key = "${Compass[index]}  ${target.label}",
-            value = if (installed) describe(target) else "NOT INSTALLED",
-            valueColour = if (installed) Muted else Dead,
-            onClick = { onEdit(index) },
-        )
+        Panel(onClick = { onEdit(index) }) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Text(
+                    text = Compass[index],
+                    style = ValueStyle.copy(color = Accent, textAlign = TextAlign.Center),
+                    modifier = Modifier.width(30.dp),
+                )
+
+                // A position whose app is hidden is drawn blank rather than filled by the next
+                // one along, because the eight are positional.
+                if (target == null) {
+                    Box(modifier = Modifier.size(30.dp))
+                    Text(text = "Blank", style = ValueStyle.copy(color = NoteStyle.color), modifier = Modifier.weight(1f))
+                } else {
+                    RingTargetIcon(target)
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(text = target.label, style = ValueStyle)
+                        Text(text = describe(target), style = NoteStyle)
+                    }
+                    if (!installed) Text(text = "MISSING", style = NoteStyle.copy(color = Accent))
+                }
+            }
+        }
     }
 
     item {
-        Row2(
-            key = "Ring apps also in search",
-            value = if (showInSearch) "ON" else "OFF",
-            valueColour = if (showInSearch) Live else Muted,
-            onClick = { onToggleSearch(!showInSearch) },
+        Panel(onClick = { onToggleSearch(!showInSearch) }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(text = "Ring apps also in search", style = ValueStyle, modifier = Modifier.weight(1f))
+                Text(
+                    text = if (showInSearch) "ON" else "OFF",
+                    style = ValueStyle.copy(color = if (showInSearch) Accent else NoteStyle.color),
+                )
+            }
+        }
+    }
+}
+
+/** A pinned web app has no package, so its icon comes from the repo rather than the system. */
+@Composable
+private fun RingTargetIcon(target: RingTarget) {
+    val bundled = (target as? RingTarget.Web)?.icon
+
+    if (bundled == null) {
+        AppIcon(packageName = target.iconPackage, size = 30.dp)
+    } else {
+        Image(
+            painter = painterResource(bundled),
+            contentDescription = target.label,
+            modifier = Modifier.size(30.dp),
         )
     }
 }
 
 private fun describe(target: RingTarget) = when (target) {
     is RingTarget.App -> target.packageName
-    is RingTarget.Web -> target.url
+    is RingTarget.Web -> "${target.url}, opened in ${target.browserPackage}"
 }
 
 internal val Compass = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
@@ -74,8 +119,8 @@ internal val Compass = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 /**
  * Every letter's shape, drawn from the templates actually in use.
  *
- * The first sample of each letter stands for it. Showing all five would show the tolerance rather
- * than the shape, and the shape is what someone reading this has to copy.
+ * The first sample of each letter stands for it. Showing all five would be showing the tolerance
+ * rather than the shape, and the shape is what someone reading this needs to copy.
  */
 @Composable
 internal fun AlphabetChart() {
@@ -89,10 +134,10 @@ internal fun AlphabetChart() {
 
     val byLetter = samples.associateBy { it.letter }
 
-    Column(modifier = Modifier.padding(bottom = 12.dp)) {
+    Panel {
         GraffitiLetters.chunked(ChartColumns).forEach { row ->
             Row(
-                modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
             ) {
                 row.forEach { letter ->
@@ -106,99 +151,140 @@ internal fun AlphabetChart() {
 
 @Composable
 private fun LetterCell(letter: Char, sample: GraffitiSample?, modifier: Modifier = Modifier) {
-    Column(modifier = modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
         Box(
-            modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(6.dp),
+            modifier = Modifier.fillMaxWidth().aspectRatio(1f).padding(5.dp),
             contentAlignment = Alignment.Center,
         ) {
             if (sample == null) {
-                Text(text = "?", style = RowStyle.copy(color = Muted))
+                Text(text = "?", style = NoteStyle)
             } else {
-                GraffitiStrokeArt(points = sample.points, modifier = Modifier.fillMaxSize(), colour = Ink)
+                GraffitiStrokeArt(points = sample.points, modifier = Modifier.fillMaxSize())
             }
         }
-        Text(text = letter.uppercase(), style = RowStyle.copy(color = Muted))
+        Text(text = letter.uppercase(), style = NoteStyle)
     }
 }
 
 private const val ChartColumns = 6
 
 /**
- * The weights as they are written in source, not a snapshot of what the ring would pick now, which
- * changes with every launch and is a different screen.
+ * The contextual weights, as they are written in source.
+ *
+ * Reported rather than computed: this is the rule set, not a snapshot of what the ring would show
+ * right now, which changes with every launch and would be a different screen entirely.
  */
 internal fun LazyListScope.contextualRuleRows(entries: List<AppEntry>) {
     val name: (String) -> String = { packageName ->
         entries.firstOrNull { it.packageName == packageName }?.label ?: packageName
     }
 
-    item { Subheading("PULLS") }
-    items(ContextualRules.pulls) { pull ->
-        Row2(
-            key = if (pull.source == pull.target) {
-                "${name(pull.source)}, itself"
-            } else {
-                "${name(pull.source)} to ${name(pull.target)}"
-            },
-            value = "${signed(pull.weight)}   ${short(pull.window)}",
-            valueColour = weightColour(pull.weight),
-        )
-    }
-
-    item { Subheading("TRUST, SPLIT AT ${short(ContextualRules.TrustShortVisit)}") }
-    items(ContextualRules.trustShortPulls.toList()) { (target, weight) ->
-        Weighted("Short visit, ${name(target)}", weight)
-    }
-    items(ContextualRules.trustLongPulls.toList()) { (target, weight) ->
-        Weighted("Long visit, ${name(target)}", weight)
-    }
-
-    item { Subheading("BASELINES AND MOTION") }
-    item { Weighted("${name(ContextApps.PAYLAH)}, still", 55) }
-    item { Weighted("${name(ContextApps.TRUST)}, still", 35) }
-    item { Weighted("${name(ContextApps.WALLET)}, always", 20) }
-    item { Weighted("Transit apps, walking", 10) }
-    item { Weighted("${name(ContextApps.MAPS)}, in a vehicle", 45) }
-    item { Weighted("Other transit apps, in a vehicle", 40) }
-
-    item { Subheading("DORMANCY RAMPS") }
-    ContextualRules.ramps.forEach { ramp ->
-        item { Weighted("${name(ramp.packageName)}, before day ${ramp.startDay}", ramp.floor) }
-        item { Weighted("${name(ramp.packageName)}, from day ${ramp.peakDay}", ramp.peakScore) }
-    }
-
-    item { Subheading("RECONCILIATION, FROM DAY ${ContextualRules.ReconciliationDay}") }
-    items(ContextualRules.reconciliation.toList()) { (target, weight) ->
-        Weighted(name(target), weight)
-    }
-
-    item { Subheading("NOTIFICATIONS AND USB") }
-    item { Weighted("Ongoing notification", ContextualRules.StickyNotificationBoost) }
-    item { Weighted("Ordinary notification, apps a rule names", ContextualRules.RegularNotificationBoost) }
     item {
-        Weighted(
-            "${name(ContextualRules.UsbSettingsTarget)}, plugged into a computer",
-            ContextualRules.UsbSettingsBoost,
-        )
+        Panel {
+            Text(text = "PULLS", style = HeaderStyle, modifier = Modifier.padding(bottom = 6.dp))
+            ContextualRules.pulls.forEach { pull ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    Text(
+                        text = if (pull.source == pull.target) {
+                            "${name(pull.source)}, itself"
+                        } else {
+                            "${name(pull.source)} to ${name(pull.target)}"
+                        },
+                        style = BodyStyle,
+                        modifier = Modifier.weight(1f),
+                    )
+                    Text(text = signed(pull.weight), style = ValueStyle.copy(color = weightColour(pull.weight)))
+                    Text(text = short(pull.window), style = NoteStyle, modifier = Modifier.width(38.dp))
+                }
+            }
+        }
+    }
+
+    item {
+        Panel {
+            Text(
+                text = "TRUST, SPLIT AT ${short(ContextualRules.TrustShortVisit)}",
+                style = HeaderStyle,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+            ContextualRules.trustShortPulls.forEach { (target, weight) ->
+                KeyValueWeighted("Short visit, ${name(target)}", weight)
+            }
+            ContextualRules.trustLongPulls.forEach { (target, weight) ->
+                KeyValueWeighted("Long visit, ${name(target)}", weight)
+            }
+        }
+    }
+
+    item {
+        Panel {
+            Text(
+                text = "BASELINES AND MOTION",
+                style = HeaderStyle,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+            KeyValueWeighted("${name(ContextApps.PAYLAH)}, still", 55)
+            KeyValueWeighted("${name(ContextApps.TRUST)}, still", 35)
+            KeyValueWeighted("${name(ContextApps.WALLET)}, always", 20)
+            KeyValueWeighted("Transit apps, walking", 10)
+            KeyValueWeighted("${name(ContextApps.MAPS)}, in a vehicle", 45)
+            KeyValueWeighted("Other transit apps, in a vehicle", 40)
+        }
+    }
+
+    item {
+        Panel {
+            Text(text = "DORMANCY RAMPS", style = HeaderStyle, modifier = Modifier.padding(bottom = 6.dp))
+            ContextualRules.ramps.forEach { ramp ->
+                Text(text = name(ramp.packageName), style = ValueStyle)
+                KeyValueWeighted("Before day ${ramp.startDay}", ramp.floor)
+                KeyValueWeighted("From day ${ramp.peakDay}", ramp.peakScore)
+            }
+        }
+    }
+
+    item {
+        Panel {
+            Text(
+                text = "RECONCILIATION, FROM DAY ${ContextualRules.ReconciliationDay}",
+                style = HeaderStyle,
+                modifier = Modifier.padding(bottom = 6.dp),
+            )
+            ContextualRules.reconciliation.forEach { (target, weight) ->
+                KeyValueWeighted(name(target), weight)
+            }
+            KeyValueWeighted(
+                "${name(ContextualRules.UsbSettingsTarget)}, plugged into a computer",
+                ContextualRules.UsbSettingsBoost,
+            )
+            KeyValueWeighted("Ongoing notification", ContextualRules.StickyNotificationBoost)
+            KeyValueWeighted("Ordinary notification, apps a rule already names", ContextualRules.RegularNotificationBoost)
+        }
     }
 }
 
 @Composable
-private fun Subheading(text: String) {
-    Text(
-        text = text,
-        style = TitleStyle.copy(color = Muted),
-        modifier = Modifier.padding(top = 20.dp, bottom = 10.dp),
-    )
+private fun KeyValueWeighted(key: String, weight: Int) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(text = key, style = BodyStyle, modifier = Modifier.weight(1f))
+        Text(text = signed(weight), style = ValueStyle.copy(color = weightColour(weight)))
+    }
 }
-
-@Composable
-private fun Weighted(key: String, weight: Int) =
-    Row2(key = key, value = signed(weight), valueColour = weightColour(weight))
 
 private fun signed(weight: Int) = if (weight > 0) "+$weight" else "$weight"
 
-private fun weightColour(weight: Int) = if (weight < 0) Dead else Live
+private fun weightColour(weight: Int) = if (weight < 0) Color(0xFFCE8B7F) else Color(0xFF9FC9A6)
 
 private fun short(duration: Duration): String {
     val minutes = duration.toMinutes()

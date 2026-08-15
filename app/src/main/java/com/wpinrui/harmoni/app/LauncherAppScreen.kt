@@ -10,40 +10,45 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListScope
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.wpinrui.harmoni.BuildConfig
-import com.wpinrui.harmoni.apps.AppEntry
+import com.wpinrui.harmoni.apps.HiddenApps
+import com.wpinrui.harmoni.apps.visible
 import com.wpinrui.harmoni.context.hasMotionPermission
 import com.wpinrui.harmoni.context.hasUsageAccess
 import com.wpinrui.harmoni.diagnostics.Diagnostics
@@ -57,17 +62,25 @@ import com.wpinrui.harmoni.system.NotificationAccess
 import com.wpinrui.harmoni.system.hasNotificationAccess
 import com.wpinrui.harmoni.ui.theme.Karla
 import com.wpinrui.harmoni.ui.theme.TurnedV
+import com.wpinrui.harmoni.ui.theme.TurnedVWeight
 
 /**
  * What the launcher is currently doing, from Section 5.
  *
- * Read-only, apart from the three things that are not settings: opening the capture tool, resetting
- * the diagnostic counts, and jumping to the Settings page behind a permission.
+ * Read-only throughout. Every binding, rule and shape here lives in source or in a captured file,
+ * so the screen reports them rather than offering to change them. The two exceptions are the two
+ * things that are not settings at all: opening the capture tool, and resetting the diagnostic
+ * counts, which are meaningless without a period to count over.
  */
 @Composable
 fun LauncherAppScreen() {
     val context = LocalContext.current
-    val entries by context.harmoni.appIndex.entries.collectAsState()
+    val hidden by HiddenApps.packages.collectAsState()
+    val all by context.harmoni.appIndex.entries.collectAsState()
+
+    // Everything on this screen except the hidden list itself works from what is visible, so a
+    // hidden app cannot be bound to the ring from here either.
+    val entries = remember(all, hidden) { all.visible(hidden) }
 
     var open by remember { mutableStateOf(OpenByDefault) }
     val toggle: (String) -> Unit = { title ->
@@ -76,15 +89,12 @@ fun LauncherAppScreen() {
 
     val overrides by RingSlots.overrides.collectAsState()
     val showRingInSearch by RingSlots.showInSearch.collectAsState()
-    val slots = remember(overrides, entries) { ringTargets(overrides, entries) }
+    val slots = remember(overrides, entries, hidden) { ringTargets(overrides, entries, hidden) }
     var editing by remember { mutableStateOf<Int?>(null) }
 
     editing?.let { index ->
         RingPicker(
-            position = Compass[index],
-            current = slots[index].label,
             entries = entries,
-            swapped = index in overrides,
             onPick = { entry ->
                 RingSlots.bind(context, index, entry.packageName)
                 editing = null
@@ -95,14 +105,19 @@ fun LauncherAppScreen() {
             },
             onDismiss = { editing = null },
         )
-        return
     }
 
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
-            .background(Ground),
-        contentPadding = PaddingValues(start = 28.dp, end = 28.dp, top = 64.dp, bottom = 104.dp),
+            .background(Background),
+        contentPadding = PaddingValues(
+            start = 22.dp,
+            end = 22.dp,
+            top = 64.dp,
+            bottom = 72.dp,
+        ),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item { Masthead() }
 
@@ -116,40 +131,28 @@ fun LauncherAppScreen() {
             )
         }
 
-        section("GRAFFITI ALPHABET", open, toggle) {
-            item { AlphabetChart() }
-            item { Row2("Redraw the alphabet", "OPEN", Accent) { context.openCapture() } }
+        section("HIDDEN APPS", open, toggle) {
+            item { HiddenAppsRow(count = hidden.size) }
         }
 
-        section("PERMISSION HEALTH", open, toggle) { permissionRows() }
+        section("GRAFFITI ALPHABET", open, toggle) {
+            item { AlphabetChart() }
+            item { OpenCaptureRow() }
+        }
+
+        section("PERMISSION HEALTH", open, toggle) { item { PermissionHealth() } }
 
         section("ATTRIBUTIONS", open, toggle) { item { Attributions() } }
 
         section("CONTEXTUAL RULES", open, toggle) { contextualRuleRows(entries) }
 
-        section("DIAGNOSTICS", open, toggle) { diagnosticRows() }
+        section("DIAGNOSTICS", open, toggle) { item { DiagnosticsPanel() } }
 
-        section("BUILD", open, toggle) {
-            item { Row2("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})") }
-            item { Row2("Built", BuildConfig.BUILD_DATE) }
-            item { Row2("Commit", BuildConfig.GIT_COMMIT) }
-            item { Row2("Build type", BuildConfig.BUILD_TYPE) }
-        }
-
-        section("APPS, ${entries.size}", open, toggle) {
-            items(entries, key = { it.component.flattenToShortString() + it.user }) { entry ->
-                AppRow(entry)
-            }
-        }
+        section("BUILD", open, toggle) { item { BuildInfo() } }
     }
 }
 
-/**
- * Which sections are open when the screen appears.
- *
- * The four that answer a question you came here with. The other four are reference: long, rarely
- * the reason for opening the screen, and in the way of the ones above them when unrolled.
- */
+/** The four that answer a question you came here with. The other four are reference. */
 private val OpenByDefault = setOf(
     "RING BINDINGS",
     "GRAFFITI ALPHABET",
@@ -157,6 +160,13 @@ private val OpenByDefault = setOf(
     "ATTRIBUTIONS",
 )
 
+/**
+ * A header and, when it is open, everything under it.
+ *
+ * Closed by default. Eight headers on one screen is an index of what the launcher is doing; the
+ * same page unrolled is several thousand pixels of reference material to scroll past to reach the
+ * one thing being looked up.
+ */
 private fun LazyListScope.section(
     title: String,
     open: Set<String>,
@@ -170,148 +180,100 @@ private fun LazyListScope.section(
 /**
  * The wordmark, with a turned v where the A would be, as the mockups set it.
  *
- * The glyph is one span of [TurnedV] inside otherwise ordinary Karla, because Karla does not carry
- * U+028C and would otherwise fall back to whatever the device happens to have.
+ * Karla has no U+028C: the shipped file and the upstream variable font both carry 393 codepoints
+ * and it is in neither, which is why the mockups' `Karla, system-ui, sans-serif` renders it in a
+ * browser fallback. Inter, subset to that one glyph, is that fallback made deliberate.
  */
 @Composable
 private fun Masthead() {
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(bottom = 42.dp),
-        verticalAlignment = Alignment.Bottom,
-        horizontalArrangement = Arrangement.SpaceBetween,
-    ) {
-        Text(
-            text = buildAnnotatedString {
-                append("H")
-                withStyle(SpanStyle(fontFamily = TurnedV)) { append("ʌ") }
-                append("rmoni")
-            },
-            style = TextStyle(
-                fontFamily = Karla,
-                fontWeight = FontWeight.ExtraLight,
-                fontSize = 34.sp,
-                letterSpacing = 0.04.em,
-                color = Ink,
-            ),
-        )
-        Text(
-            text = BuildConfig.VERSION_NAME,
-            style = TextStyle(
-                fontFamily = Karla,
-                fontWeight = FontWeight.Normal,
-                fontSize = 17.sp,
-                letterSpacing = 0.03.em,
-                color = Accent,
-            ),
-        )
-    }
+    Text(
+        text = buildAnnotatedString {
+            append("H")
+            // A lowercase letter sitting at x-height, scaled to stand level with Karla's capitals.
+            // Measured across both fonts rather than within one: Inter's turned v is 0.546 em tall
+            // and Karla's H is 0.628 em, and Karla's caps are short for its em.
+            withStyle(
+                SpanStyle(
+                    fontFamily = TurnedV,
+                    fontWeight = TurnedVWeight,
+                    fontSize = MastheadSize * CapScale,
+                ),
+            ) {
+                append("ʌ")
+            }
+            append("RMONI")
+        },
+        style = MastheadStyle,
+    )
 }
 
+private val MastheadSize = 44.sp
+private const val CapScale = 1.150f
+
+private val MastheadStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.ExtraLight,
+    fontSize = MastheadSize,
+    lineHeight = MastheadSize * 1.1f,
+    letterSpacing = 0.14.em,
+    color = Color.White,
+)
+
 @Composable
-internal fun SectionHeader(title: String, open: Boolean, onToggle: () -> Unit) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .noRipple(onToggle)
-            .padding(top = 34.dp, bottom = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(9.dp),
-    ) {
-        Text(text = if (open) "▾" else "▸", style = TitleStyle.copy(fontSize = 21.sp))
-        Text(text = title, style = TitleStyle)
+private fun PermissionHealth() {
+    val context = LocalContext.current
+    val listenerBound by NotificationAccess.connected.collectAsState()
+
+    // These are granted in Settings, in another task, so nothing here changes while the screen is
+    // in front of you. Coming back is the moment the answer has just changed, and the only moment
+    // worth asking again.
+    var resumes by remember { mutableIntStateOf(0) }
+    LifecycleResumeEffect(Unit) {
+        resumes++
+        onPauseOrDispose {}
     }
-}
 
-/**
- * One key and one value, ruled off from the row above.
- *
- * The key is held to its own width and the value takes the rest, so a package name wraps rather
- * than pushing the thing it belongs to off the screen.
- */
-@Composable
-internal fun Row2(
-    key: String,
-    value: String,
-    valueColour: Color = Ink,
-    onClick: (() -> Unit)? = null,
-) {
-    val base = Modifier.fillMaxWidth()
+    val granted by produceState(initialValue = emptyList<Permission>(), context, listenerBound, resumes) {
+        value = listOf(
+            Permission("Notification listener", context.hasNotificationAccess(), notificationIntent(context)),
+            Permission("Media sessions", listenerBound, notificationIntent(context)),
+            Permission("Usage access", context.hasUsageAccess(), usageAccessIntent(context)),
+            Permission("Motion", context.hasMotionPermission(), appDetailsIntent(context)),
+            Permission("Wallpaper, all files access", context.canReadWallpaper(), allFilesIntent(context)),
+        )
+    }
 
-    Column(modifier = if (onClick == null) base else base.noRipple(onClick)) {
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Rule))
-        Row(
-            modifier = Modifier.fillMaxWidth().padding(vertical = 15.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
-        ) {
-            Text(
-                text = key,
-                style = RowStyle,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(0.9f, fill = false),
-            )
-            Text(
-                text = value,
-                style = RowStyle.copy(color = valueColour, textAlign = TextAlign.End),
-                modifier = Modifier.weight(1f),
-            )
+    Panel {
+        granted.forEach { permission ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .noRipple { context.openSettings(permission.intent) }
+                    .padding(vertical = 5.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(7.dp)
+                        .clip(CircleShape)
+                        .background(if (permission.live) Live else Dead),
+                )
+                Text(text = permission.label, style = BodyStyle, modifier = Modifier.weight(1f))
+                Text(text = if (permission.live) "LIVE" else "OFF", style = ValueStyle)
+            }
         }
     }
 }
 
+private data class Permission(val label: String, val live: Boolean, val intent: Intent)
+
 /**
- * Each permission, and the Settings page that grants it.
+ * Straight to the switch, not to the top of Settings.
  *
- * Deep linked per row rather than dropping into Settings at the top: three of these five live
- * behind special-access lists that take several taps to find, and knowing a thing is off is not
- * much use without a way to reach the switch.
+ * Three of these five live behind special-access lists that take several taps to find, and the
+ * listener has a page of its own that can be addressed by component.
  */
-private fun LazyListScope.permissionRows() {
-    item { NotificationRow() }
-    item { MediaSessionRow() }
-    item { PermissionRow("Usage access", { it.hasUsageAccess() }, ::usageAccessIntent) }
-    item { PermissionRow("Motion", { it.hasMotionPermission() }, ::appDetailsIntent) }
-    item { PermissionRow("Wallpaper, all files", { it.canReadWallpaper() }, ::allFilesIntent) }
-}
-
-@Composable
-private fun NotificationRow() =
-    PermissionRow("Notification listener", { it.hasNotificationAccess() }, ::notificationIntent)
-
-/** Bound, not merely granted: reading media sessions needs the service actually running. */
-@Composable
-private fun MediaSessionRow() {
-    val context = LocalContext.current
-    val bound by NotificationAccess.connected.collectAsState()
-
-    Row2(
-        key = "Media sessions",
-        value = if (bound) "LIVE" else "OFF",
-        valueColour = if (bound) Live else Dead,
-        onClick = { context.open(notificationIntent(context)) },
-    )
-}
-
-@Composable
-private fun PermissionRow(
-    label: String,
-    granted: (Context) -> Boolean,
-    intent: (Context) -> Intent,
-) {
-    val context = LocalContext.current
-
-    // Recomputed on every composition rather than remembered: these are toggled in Settings, and
-    // coming back to this screen is exactly when the answer has just changed.
-    val live by produceState(initialValue = false, context, label) { value = granted(context) }
-
-    Row2(
-        key = label,
-        value = if (live) "LIVE" else "OFF",
-        valueColour = if (live) Live else Dead,
-        onClick = { context.open(intent(context)) },
-    )
-}
-
 private fun notificationIntent(context: Context) =
     Intent(Settings.ACTION_NOTIFICATION_LISTENER_DETAIL_SETTINGS).putExtra(
         Settings.EXTRA_NOTIFICATION_LISTENER_COMPONENT_NAME,
@@ -324,46 +286,92 @@ private fun usageAccessIntent(context: Context) =
 private fun allFilesIntent(context: Context) =
     Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION, context.selfUri())
 
-/** Motion is an ordinary runtime permission, so its switch lives on the app's own page. */
+/** Motion is an ordinary runtime permission, so its switch is on the app's own page. */
 private fun appDetailsIntent(context: Context) =
     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, context.selfUri())
 
 private fun Context.selfUri() = "package:$packageName".toUri()
 
-/**
- * Falls back to the app's own Settings page.
- *
- * Some of these deep links are honoured by the framework but dropped by an OEM's Settings, and
- * landing somewhere adjacent beats bouncing off a dialog.
- */
-private fun Context.open(intent: Intent) {
+/** Some OEMs drop a deep link that the framework honours, so landing adjacent beats bouncing. */
+private fun Context.openSettings(intent: Intent) {
     runCatching { startActivity(intent) }
         .recoverCatching { startActivity(appDetailsIntent(this)) }
 }
 
-private fun Context.openCapture() =
-    startActivity(Intent(this, GraffitiCaptureActivity::class.java))
-
-private fun LazyListScope.diagnosticRows() {
-    item { DiagnosticsBody() }
-}
-
 @Composable
-private fun DiagnosticsBody() {
+private fun DiagnosticsPanel() {
     val context = LocalContext.current
     val counts by Diagnostics.counts.collectAsState()
 
-    Column {
-        Row2("Rings dismissed without a pick", counts.ringDismissals.toString())
-        Row2("Taps refused near an edge", counts.edgeRejects.toString())
+    Panel {
+        if (counts.total == 0) {
+            Text(text = "Nothing recorded yet.", style = BodyStyle)
+            return@Panel
+        }
 
-        counts.misreads.entries
-            .sortedWith(compareByDescending<Map.Entry<Char, Int>> { it.value }.thenBy { it.key })
-            .forEach { (letter, count) ->
-                Row2("${letter.uppercase()}, erased at once", count.toString())
-            }
+        KeyValue("Rings dismissed without a pick", counts.ringDismissals.toString())
+        KeyValue("Taps refused near an edge", counts.edgeRejects.toString())
 
-        Row2("Reset counts", "CLEAR", Accent) { Diagnostics.clear(context) }
+        if (counts.misreads.isNotEmpty()) {
+            Text(
+                text = "LETTERS ERASED IMMEDIATELY",
+                style = NoteStyle,
+                modifier = Modifier.padding(top = 10.dp, bottom = 4.dp),
+            )
+            counts.misreads.entries
+                .sortedWith(compareByDescending<Map.Entry<Char, Int>> { it.value }.thenBy { it.key })
+                .forEach { (letter, count) ->
+                    KeyValue(letter.uppercase(), count.toString())
+                }
+        }
+
+        Text(
+            text = "RESET COUNTS",
+            modifier = Modifier
+                .padding(top = 12.dp)
+                .clip(RoundedCornerShape(8.dp))
+                .noRipple { Diagnostics.clear(context) }
+                .padding(vertical = 6.dp),
+            style = ValueStyle.copy(color = Accent),
+        )
+    }
+}
+
+@Composable
+private fun BuildInfo() {
+    Panel {
+        KeyValue("Version", "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
+        KeyValue("Built", BuildConfig.BUILD_DATE)
+        KeyValue("Commit", BuildConfig.GIT_COMMIT)
+        KeyValue("Build type", BuildConfig.BUILD_TYPE)
+    }
+}
+
+@Composable
+private fun HiddenAppsRow(count: Int) {
+    val context = LocalContext.current
+
+    Panel(onClick = { context.startActivity(Intent(context, HiddenAppsActivity::class.java)) }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                text = if (count == 1) "1 app hidden" else "$count apps hidden",
+                style = ValueStyle,
+                modifier = Modifier.weight(1f),
+            )
+            Text(text = "OPEN", style = ValueStyle.copy(color = Accent))
+        }
+    }
+}
+
+@Composable
+private fun OpenCaptureRow() {
+    val context = LocalContext.current
+
+    Panel(onClick = { context.startActivity(Intent(context, GraffitiCaptureActivity::class.java)) }) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = "Redraw the alphabet", style = ValueStyle, modifier = Modifier.weight(1f))
+            Text(text = "OPEN", style = ValueStyle.copy(color = Accent))
+        }
     }
 }
 
@@ -371,37 +379,87 @@ private fun DiagnosticsBody() {
 private fun Attributions() {
     val context = LocalContext.current
 
-    Column {
+    Panel {
         Text(
-            text = "Badge icons from Flaticon, used under the Flaticon free licence. Type is " +
-                "Karla and Inter, both under the SIL Open Font License.",
-            style = RowStyle.copy(color = Muted),
-            modifier = Modifier.padding(bottom = 14.dp),
+            text = "Badge icons from Flaticon, used under the Flaticon free licence.",
+            style = BodyStyle,
         )
-        Row2("Telegram icons, Magnific", "FLATICON", Accent) {
-            context.open(web("https://www.flaticon.com/free-icons/telegram"))
-        }
-        Row2("WhatsApp icons, Fathema Khanom", "FLATICON", Accent) {
-            context.open(web("https://www.flaticon.com/free-icons/whatsapp"))
-        }
-        Row2("Instagram icons, Grow studio", "FLATICON", Accent) {
-            context.open(web("https://www.flaticon.com/free-icons/instagram"))
-        }
-        Row2("Karla, the Karla Project Authors", "OFL", Accent) {
-            context.open(web("https://github.com/googlefonts/karla"))
-        }
-        Row2("Inter, the Inter Project Authors", "OFL", Accent) {
-            context.open(web("https://github.com/rsms/inter"))
-        }
+        Credit(context, "Telegram icons by Magnific", "https://www.flaticon.com/free-icons/telegram")
+        Credit(context, "WhatsApp icons by Fathema Khanom", "https://www.flaticon.com/free-icons/whatsapp")
+        Credit(context, "Instagram icons by Grow studio", "https://www.flaticon.com/free-icons/instagram")
+
+        Text(
+            text = "Type is Karla by the Karla Project Authors, under the SIL Open Font License. " +
+                "The full text ships with the source at licenses/Karla-OFL.txt.",
+            style = BodyStyle,
+            modifier = Modifier.padding(top = 10.dp),
+        )
+        Credit(context, "github.com/googlefonts/karla", "https://github.com/googlefonts/karla")
     }
 }
 
-private fun web(url: String) = Intent(Intent.ACTION_VIEW, url.toUri())
-
-// Section 4 matches names and aliases. None are defined yet, so an app resolves by its name alone
-// and there is nothing to put beside the package.
 @Composable
-private fun AppRow(entry: AppEntry) = Row2(entry.label, entry.packageName, Muted)
+private fun Credit(context: Context, label: String, url: String) {
+    Text(
+        text = label,
+        modifier = Modifier
+            .padding(top = 4.dp)
+            .noRipple { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())) },
+        style = BodyStyle.copy(color = Accent),
+    )
+}
+
+// Shared furniture, so every section reads the same way down the page.
+
+@Composable
+internal fun SectionHeader(title: String, open: Boolean, onToggle: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .noRipple(onToggle)
+            .padding(top = 22.dp, bottom = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Text(
+            text = if (open) "▾" else "▸",
+            style = HeaderStyle.copy(color = Accent, fontSize = 14.sp),
+        )
+        Text(text = title, style = HeaderStyle)
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(1.dp)
+                .background(Color.White.copy(alpha = 0.14f)),
+        )
+    }
+}
+
+@Composable
+internal fun Panel(onClick: (() -> Unit)? = null, content: @Composable ColumnScope.() -> Unit) {
+    val surface = Modifier
+        .fillMaxWidth()
+        .clip(RoundedCornerShape(14.dp))
+        .background(PanelColour)
+
+    Column(
+        modifier = (if (onClick == null) surface else surface.noRipple(onClick))
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        content = content,
+    )
+}
+
+@Composable
+internal fun KeyValue(key: String, value: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Text(text = key, style = BodyStyle, modifier = Modifier.weight(1f))
+        Text(text = value, style = ValueStyle)
+    }
+}
 
 @Composable
 internal fun Modifier.noRipple(onClick: () -> Unit): Modifier {
@@ -409,27 +467,40 @@ internal fun Modifier.noRipple(onClick: () -> Unit): Modifier {
     return clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
 }
 
-internal val Ground = Color(0xFF1A1715)
-internal val Ink = Color(0xFFF4EFE9)
-internal val Accent = Color(0xFFEAB98F)
-internal val Muted = Color(0xFF9C918A)
-internal val Rule = Color.White.copy(alpha = 0.16f)
-internal val Live = Color(0xFF9FC9A6)
-internal val Dead = Color(0xFFCE8B7F)
+internal val Background = Color(0xFF120E0C)
+internal val PanelColour = Color(0xFF1C1714)
+internal val Accent = Color(0xFFE8B979)
+private val Live = Color(0xFF7FC98B)
+private val Dead = Color(0xFF8C6A63)
 
-internal val TitleStyle = TextStyle(
+internal val HeaderStyle = TextStyle(
     fontFamily = Karla,
     fontWeight = FontWeight.Medium,
-    fontSize = 15.sp,
-    letterSpacing = 0.12.em,
-    color = Accent,
+    fontSize = 11.sp,
+    letterSpacing = 0.22.em,
+    color = Color(0xFFCFC6BD),
 )
 
-internal val RowStyle = TextStyle(
+internal val BodyStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.Light,
+    fontSize = 14.sp,
+    lineHeight = 1.4.em,
+    color = Color(0xFFB9AFA7),
+)
+
+internal val ValueStyle = TextStyle(
     fontFamily = Karla,
     fontWeight = FontWeight.Normal,
-    fontSize = 17.sp,
-    letterSpacing = 0.01.em,
-    lineHeight = 1.35.em,
-    color = Ink,
+    fontSize = 13.sp,
+    letterSpacing = 0.04.em,
+    color = Color.White,
+)
+
+internal val NoteStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.Light,
+    fontSize = 11.5.sp,
+    lineHeight = 1.4.em,
+    color = Color(0xFF8B817A),
 )

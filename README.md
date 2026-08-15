@@ -23,9 +23,14 @@ swipe to erase.
 Badge counts and now-playing text need notification access, granted by hand under Settings,
 Notifications, Device and app notifications.
 
-Opening Harmoni from the app list gives the launcher app screen: the ring bindings, the alphabet
-chart, the contextual rules as written, permission health, build info, diagnostics and the full
-app list. It is read-only.
+Opening Harmoni from the app list gives the launcher app screen: the ring bindings, hidden apps,
+the alphabet chart, permission health, the contextual rules as written, diagnostics and build
+info. The rules and the diagnostics are read-only; the ring bindings and the hidden list are not.
+
+Any ring position can be bound to another app, or reset to the one in source. Hidden apps never
+appear anywhere Harmoni offers an app, and a position holding one is left blank rather than
+closing the gap. Both save on the tap and take effect the next time you come home, which is when
+Harmoni restarts to pick them up.
 
 ## Graffiti alphabet
 

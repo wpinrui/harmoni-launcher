@@ -2,6 +2,7 @@ package com.wpinrui.harmoni.home
 
 import android.content.Context
 import androidx.core.content.edit
+import com.wpinrui.harmoni.app.SettingsRestart
 import com.wpinrui.harmoni.apps.AppEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -56,16 +57,24 @@ object RingSlots {
     fun bind(context: Context, index: Int, packageName: String) {
         preferences(context).edit { putString("$SLOT$index", packageName) }
         _overrides.value = _overrides.value + (index to packageName)
+        SettingsRestart.mark()
     }
 
     fun reset(context: Context, index: Int) {
         preferences(context).edit { remove("$SLOT$index") }
         _overrides.value = _overrides.value - index
+        SettingsRestart.mark()
+    }
+
+    /** Hiding an app it is bound to takes it off the ring, back to whatever the source says. */
+    fun resetBindingsTo(context: Context, packageName: String) {
+        _overrides.value.filterValues { it == packageName }.keys.forEach { reset(context, it) }
     }
 
     fun setShowInSearch(context: Context, show: Boolean) {
         preferences(context).edit { putBoolean(SHOW_IN_SEARCH, show) }
         _showInSearch.value = show
+        SettingsRestart.mark()
     }
 }
 
@@ -74,10 +83,20 @@ object RingSlots {
  *
  * Labels come from the index rather than being stored beside the package, so renaming or updating
  * an app changes what the ring calls it without anything having to be rebound.
+ *
+ * A position holding a hidden app comes back null and is left blank. The eight are positional, so
+ * closing the gap would move every app after it and cost the muscle memory the ring is for.
  */
-fun ringTargets(overrides: Map<Int, String>, entries: List<AppEntry>): List<RingTarget> =
+fun ringTargets(
+    overrides: Map<Int, String>,
+    entries: List<AppEntry>,
+    hidden: Set<String> = emptySet(),
+): List<RingTarget?> =
     RingBindings.slots.mapIndexed { index, default ->
-        val packageName = overrides[index] ?: return@mapIndexed default
-        val label = entries.firstOrNull { it.packageName == packageName }?.label ?: packageName
-        RingTarget.App(packageName, label)
+        val target = overrides[index]?.let { packageName ->
+            val label = entries.firstOrNull { it.packageName == packageName }?.label ?: packageName
+            RingTarget.App(packageName, label)
+        } ?: default
+
+        if (target.iconPackage in hidden) null else target
     }

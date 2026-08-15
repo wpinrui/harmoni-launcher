@@ -90,6 +90,13 @@
             android:label="@string/graffiti_capture"
             android:theme="@style/Theme.Harmoni" />
 
+        <!-- The hidden apps list, reached from the launcher app screen. -->
+        <activity
+            android:name=".app.HiddenAppsActivity"
+            android:exported="false"
+            android:label="@string/hidden_apps"
+            android:theme="@style/Theme.Harmoni" />
+
         <!--
             Bound by the system once notification access is granted by hand in Settings. It feeds
             the badge counts, and its component is also the token that lets Harmoni read active

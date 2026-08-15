@@ -18,6 +18,7 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalHapticFeedback
+import com.wpinrui.harmoni.apps.HiddenApps
 import com.wpinrui.harmoni.context.ContextualRing
 import com.wpinrui.harmoni.diagnostics.Diagnostics
 import androidx.compose.ui.platform.LocalDensity
@@ -39,7 +40,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     var surface by remember { mutableStateOf(Size.Zero) }
     var rejectCount by remember { mutableIntStateOf(0) }
     var ringCentre by remember { mutableStateOf<Offset?>(null) }
-    var slots by remember { mutableStateOf(emptyList<RingTarget>()) }
+    var slots by remember { mutableStateOf(emptyList<RingTarget?>()) }
     var ringInteractive by remember { mutableStateOf(true) }
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -51,7 +52,8 @@ fun HomeSurface(modifier: Modifier = Modifier) {
 
     val entries by context.harmoni.appIndex.entries.collectAsState()
     val overrides by RingSlots.overrides.collectAsState()
-    val fixed = remember(overrides, entries) { ringTargets(overrides, entries) }
+    val hidden by HiddenApps.packages.collectAsState()
+    val fixed = remember(overrides, entries, hidden) { ringTargets(overrides, entries, hidden) }
 
     // Coming home while the ring or the app list is up means "get me back to the wallpaper".
     LaunchedEffect(Unit) {

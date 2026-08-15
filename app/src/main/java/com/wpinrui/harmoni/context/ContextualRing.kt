@@ -2,6 +2,7 @@ package com.wpinrui.harmoni.context
 
 import android.content.Context
 import android.util.Log
+import com.wpinrui.harmoni.apps.HiddenApps
 import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.home.HomeBindings
 import com.wpinrui.harmoni.home.RingBindings
@@ -32,7 +33,9 @@ class ContextualRing(private val context: Context) {
             lastUsed = history.lastUsed(now),
             notified = NotificationCounts.counts.value.keys,
             sticky = NotificationCounts.sticky.value,
-            excluded = alreadyReachable,
+            // Hidden apps are excluded here as everywhere else: a rule can name one, but nothing
+            // the launcher offers may.
+            excluded = alreadyReachable + HiddenApps.packages.value,
         )
 
         if (snapshot.lastUsed.isEmpty()) {

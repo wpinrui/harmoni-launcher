@@ -60,6 +60,8 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.AppEntryIcon
+import com.wpinrui.harmoni.apps.HiddenApps
+import com.wpinrui.harmoni.apps.visible
 import com.wpinrui.harmoni.diagnostics.Diagnostics
 import com.wpinrui.harmoni.graffiti.isBackspaceStroke
 import com.wpinrui.harmoni.harmoni
@@ -91,12 +93,14 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
     // grid of eight. The toggle lives on the launcher app screen for when that is not wanted.
     val overrides by RingSlots.overrides.collectAsState()
     val showRing by RingSlots.showInSearch.collectAsState()
-    val pool = remember(entries, overrides, showRing) {
+    val hidden by HiddenApps.packages.collectAsState()
+    val pool = remember(entries, overrides, showRing, hidden) {
+        val visible = entries.visible(hidden)
         if (showRing) {
-            entries
+            visible
         } else {
-            val onRing = ringTargets(overrides, entries).map { it.iconPackage }.toSet()
-            entries.filterNot { it.packageName in onRing }
+            val onRing = ringTargets(overrides, visible, hidden).mapNotNull { it?.iconPackage }.toSet()
+            visible.filterNot { it.packageName in onRing }
         }
     }
 
