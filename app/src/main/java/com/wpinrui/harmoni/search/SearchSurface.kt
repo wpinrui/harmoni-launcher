@@ -93,7 +93,7 @@ fun SearchSurface(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
     LaunchedEffect(Unit) { shown = true }
     val entrance by animateFloatAsState(
         targetValue = if (shown) 1f else 0f,
-        animationSpec = tween(durationMillis = 220),
+        animationSpec = tween(durationMillis = EntranceMillis),
         label = "search-entrance",
     )
 
@@ -331,5 +331,8 @@ private fun BlurredWallpaper(radius: Dp) {
         )
     }
 }
+
+/** Slower than the mockup's 220ms, which was too quick to read against the keyboard rising. */
+private const val EntranceMillis = 500
 
 private val BlurRadius = 14.dp

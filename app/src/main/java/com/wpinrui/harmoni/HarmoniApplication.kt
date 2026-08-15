@@ -7,6 +7,10 @@ import com.wpinrui.harmoni.apps.IconResolver
 import com.wpinrui.harmoni.apps.SystemIconResolver
 import com.wpinrui.harmoni.context.MotionMonitor
 import com.wpinrui.harmoni.context.UsbConnection
+import com.wpinrui.harmoni.search.WallpaperCache
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 
 /**
  * Process-level home for the pieces every surface shares.
@@ -33,6 +37,10 @@ class HarmoniApplication : Application() {
         iconResolver = SystemIconResolver(this)
         usb = UsbConnection(this).apply { start() }
         MotionMonitor.start(this)
+
+        // Decoded up front so the search view's backdrop is ready to fade in with everything
+        // else rather than arriving after the animation has finished.
+        CoroutineScope(Dispatchers.Default).launch { WallpaperCache.prime(this@HarmoniApplication) }
     }
 }
 

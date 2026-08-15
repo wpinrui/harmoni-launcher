@@ -40,7 +40,9 @@ sealed interface HomeGesture {
  */
 fun Modifier.homeGestures(onGesture: (HomeGesture) -> Unit): Modifier = pointerInput(Unit) {
     val touchSlop = viewConfiguration.touchSlop
-    val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+    // Two thirds of the system's, which is tuned for pressing something rather than for a
+    // gesture whose whole job is to be quick.
+    val longPressTimeout = viewConfiguration.longPressTimeoutMillis * 2 / 3
     val doubleTapTimeout = viewConfiguration.doubleTapTimeoutMillis
 
     // Both halves of a double tap are seen by this one handler, so nothing that appears in

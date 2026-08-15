@@ -9,14 +9,16 @@ import android.provider.Settings
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
-import androidx.compose.runtime.produceState
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.platform.LocalContext
 import androidx.core.net.toUri
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.scale
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
 
 /**
@@ -31,10 +33,22 @@ import kotlinx.coroutines.withContext
  * live wallpaper, this is null and the search view falls back to its tint alone.
  */
 @Composable
-fun rememberWallpaper(): State<ImageBitmap?> {
-    val context = LocalContext.current
-    return produceState<ImageBitmap?>(initialValue = null, context) {
-        value = withContext(Dispatchers.IO) { context.readWallpaper() }
+fun rememberWallpaper(): State<ImageBitmap?> = WallpaperCache.bitmap.collectAsState()
+
+/**
+ * Holds the blurred backdrop's source for the life of the process.
+ *
+ * Read once at startup rather than when the view opens. Decoding it takes long enough that the
+ * entrance animation is over before the bitmap arrives, so the blur would appear fully formed
+ * after the fade rather than during it.
+ */
+object WallpaperCache {
+
+    private val _bitmap = MutableStateFlow<ImageBitmap?>(null)
+    val bitmap: StateFlow<ImageBitmap?> = _bitmap.asStateFlow()
+
+    suspend fun prime(context: Context) {
+        _bitmap.value = withContext(Dispatchers.IO) { context.readWallpaper() }
     }
 }
 
