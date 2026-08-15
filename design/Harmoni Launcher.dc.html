@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Karla:wght@200;300;400;500&family=JetBrains+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+  body { margin:0; background:#16130f; }
+  a { color:#d8a07a; }
+  a:hover { color:#efc7a8; }
+</style>
+</helmet>
+
+<section style="display:flex;flex-direction:column;gap:44px;padding:56px 60px 80px;background:#16130f;font-family:Karla,system-ui,sans-serif;color:#efe9e4;min-height:100%;box-sizing:border-box">
+
+  <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:40px;flex-wrap:wrap">
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div style="font-size:11px;font-weight:400;letter-spacing:.3em;text-transform:uppercase;opacity:.45">Turn 1 · 1a</div>
+      <div style="font-size:44px;font-weight:200;letter-spacing:-.01em;line-height:1">Hʌrmoni Launcher</div>
+      <div style="font-size:14px;font-weight:300;letter-spacing:.02em;opacity:.6;max-width:640px;text-wrap:pretty">Wallpaper, one composed block, and nothing else at rest. Everything else is a gesture: tap for the ring, draw for search. The first phone is live — try it.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:7px;font-size:13px;font-weight:300;letter-spacing:.03em;opacity:.55;line-height:1.6">
+      <div>tap empty surface → ring</div>
+      <div>tap centre → dismiss</div>
+      <div>tap within 142px of an edge → rejected</div>
+      <div>drag a stroke → graffiti search</div>
+      <div>swipe ← → backspace</div>
+    </div>
+  </div>
+
+  <div style="display:flex;flex-wrap:wrap;gap:52px;align-items:flex-start">
+
+    <div style="display:flex;flex-direction:column;gap:16px;width:412px">
+      <dc-import name="LauncherPhone" mode="live" hint-size="412px,892px"></dc-import>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="font-size:13px;font-weight:400;letter-spacing:.14em;text-transform:uppercase">Home · live</div>
+        <div style="font-size:12.5px;font-weight:300;opacity:.55;line-height:1.5;text-wrap:pretty">Clock block top-left. Badges, music and the YouTube link are the only tap targets. Tap the music row to swap playing / idle.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;width:412px">
+      <dc-import name="LauncherPhone" mode="ring" hint-size="412px,892px"></dc-import>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="font-size:13px;font-weight:400;letter-spacing:.14em;text-transform:uppercase">Ring</div>
+        <div style="font-size:12.5px;font-weight:300;opacity:.55;line-height:1.5;text-wrap:pretty">Eight fixed apps on frosted pads, r=104px, centred on the touch point. Centre dot dismisses.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;width:412px">
+      <dc-import name="LauncherPhone" mode="search" hint-size="412px,892px"></dc-import>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="font-size:13px;font-weight:400;letter-spacing:.14em;text-transform:uppercase">Graffiti search</div>
+        <div style="font-size:12.5px;font-weight:300;opacity:.55;line-height:1.5;text-wrap:pretty">Dark tint and blur over the home surface. Query, 4×2 paginated grid, then input space. Subsequence match on name and aliases.</div>
+      </div>
+    </div>
+
+    <div style="display:flex;flex-direction:column;gap:16px;width:412px">
+      <dc-import name="LauncherPhone" mode="app" hint-size="412px,892px"></dc-import>
+      <div style="display:flex;flex-direction:column;gap:5px">
+        <div style="font-size:13px;font-weight:400;letter-spacing:.14em;text-transform:uppercase">Launcher app screen</div>
+        <div style="font-size:12.5px;font-weight:300;opacity:.55;line-height:1.5;text-wrap:pretty">Read-only. Bindings, permission health, build, diagnostics, and every name and alias that resolves.</div>
+      </div>
+    </div>
+
+  </div>
+
+</section>
+</x-dc>
+</body>
+</html>
