@@ -39,15 +39,20 @@ fun Modifier.homeGestures(onGesture: (HomeGesture) -> Unit): Modifier = pointerI
     val longPressTimeout = viewConfiguration.longPressTimeoutMillis
 
     awaitEachGesture {
-        val gesture = awaitHomeGesture(touchSlop, longPressTimeout)
-        if (gesture != null) onGesture(gesture)
+        awaitHomeGesture(touchSlop, longPressTimeout, onGesture)
     }
 }
 
+/**
+ * Emits through [emit] rather than returning, because the three gestures resolve at different
+ * moments. A long press is known the instant the threshold passes and is reported there, so the
+ * ring is up while the finger is still down. A tap and a stroke are only known on release.
+ */
 private suspend fun AwaitPointerEventScope.awaitHomeGesture(
     touchSlop: Float,
     longPressTimeout: Long,
-): HomeGesture? {
+    emit: (HomeGesture) -> Unit,
+) {
     val down = awaitFirstDown(requireUnconsumed = true)
     val path = mutableListOf(down.position)
     var moved = false
@@ -70,14 +75,15 @@ private suspend fun AwaitPointerEventScope.awaitHomeGesture(
         }
     }
 
-    return when {
-        // Timed out with the finger still down and still: the contextual ring.
+    when {
+        // Timed out with the finger still down and still. Report it now, then swallow the rest
+        // of the press so lifting off does not read as a second gesture.
         settled == null && !moved && !released -> {
+            emit(HomeGesture.LongPress(down.position))
             awaitRelease(down.id)
-            HomeGesture.LongPress(down.position)
         }
 
-        released && !moved -> HomeGesture.Tap(down.position)
+        released && !moved -> emit(HomeGesture.Tap(down.position))
 
         else -> {
             while (!released) {
@@ -85,7 +91,7 @@ private suspend fun AwaitPointerEventScope.awaitHomeGesture(
                 path += change.position
                 if (!change.pressed) released = true
             }
-            HomeGesture.Stroke(path.toList())
+            emit(HomeGesture.Stroke(path.toList()))
         }
     }
 }

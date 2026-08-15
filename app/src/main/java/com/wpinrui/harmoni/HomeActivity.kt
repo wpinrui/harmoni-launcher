@@ -3,12 +3,15 @@ package com.wpinrui.harmoni
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.SystemBarStyle
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import com.wpinrui.harmoni.context.MotionMonitor
+import com.wpinrui.harmoni.context.hasMotionPermission
 import com.wpinrui.harmoni.home.HomeSurface
 import com.wpinrui.harmoni.ui.theme.HarmoniTheme
 
@@ -19,6 +22,13 @@ import com.wpinrui.harmoni.ui.theme.HarmoniTheme
  * Section 3's gesture layer both attach to [HomeSurface].
  */
 class HomeActivity : ComponentActivity() {
+
+    // Motion feeds the contextual ring's transit rules. Refusing it costs those rules and
+    // nothing else, so it is asked for once and never nagged about.
+    private val requestMotion =
+        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) MotionMonitor.start(this)
+        }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         // Transparent bars, light icons: the wallpaper is what shows behind them, and a scrim
@@ -44,6 +54,10 @@ class HomeActivity : ComponentActivity() {
 
         // Home is the bottom of the stack. Finishing it would expose whatever sits behind the
         // launcher, so back does nothing.
+        if (!hasMotionPermission()) {
+            requestMotion.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
+        }
+
         onBackPressedDispatcher.addCallback(this) {}
     }
 }

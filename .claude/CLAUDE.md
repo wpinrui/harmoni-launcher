@@ -79,6 +79,7 @@ Still on, because none of it is code quality:
 - Never suppress an error or skip a test. Fix root causes, not symptoms.
 - Your workspace IS my working copy. Never tell me to pull, rebuild or sync to see your changes.
 - Never offer to launch or run the project for me. Verify headlessly and state plainly what you could not verify that way.
+- Building and installing to my device is fine. Running it is not: no `am start`, no `force-stop`, no `input tap`/`swipe`, no screenshots unless I ask. I drive the app, you don't.
 - No em-dashes anywhere you write. End the sentence at the clause and cut the trailer, do not swap in a comma or hyphen.
 - No middots either, anywhere: not in prose, not in UI copy, not as a separator in code or in output. Use a word, a comma or a list.
 - Load-bearing info on a GitHub issue goes in the body (`gh issue edit`), never in comments. Fold corrections and dependency notes into the body.

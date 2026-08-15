@@ -14,6 +14,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import com.wpinrui.harmoni.context.ContextualRing
 import androidx.compose.ui.platform.LocalDensity
 
 /**
@@ -29,7 +30,9 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     var surface by remember { mutableStateOf(Size.Zero) }
     var rejectCount by remember { mutableIntStateOf(0) }
     var ringCentre by remember { mutableStateOf<Offset?>(null) }
+    var slots by remember { mutableStateOf(RingBindings.slots) }
     val context = LocalContext.current
+    val contextual = remember(context) { ContextualRing(context) }
 
     Box(
         modifier = modifier
@@ -39,6 +42,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                 when (gesture) {
                     is HomeGesture.Tap ->
                         if (RingPlacement.fits(gesture.position, surface, density)) {
+                            slots = RingBindings.slots
                             ringCentre = gesture.position
                         } else {
                             rejectCount++
@@ -47,7 +51,8 @@ fun HomeSurface(modifier: Modifier = Modifier) {
 
                     is HomeGesture.LongPress ->
                         if (RingPlacement.fits(gesture.position, surface, density)) {
-                            Log.d(TAG, "Contextual ring at ${gesture.position}")
+                            slots = contextual.slots()
+                            ringCentre = gesture.position
                         } else {
                             rejectCount++
                             Log.d(TAG, "Long press rejected, too near an edge: ${gesture.position}")
@@ -64,6 +69,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
         ringCentre?.let { centre ->
             Ring(
                 centre = centre,
+                slots = slots,
                 onPick = { target ->
                     ringCentre = null
                     context.launch(target)
