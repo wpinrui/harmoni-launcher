@@ -103,13 +103,6 @@ internal fun AlphabetChart() {
                 repeat(ChartColumns - row.size) { Box(modifier = Modifier.weight(1f)) }
             }
         }
-
-        Text(
-            text = "One stroke each, drawn in the direction the dot starts from. Reversing a " +
-                "stroke makes a different letter, not the same one.",
-            style = NoteStyle,
-            modifier = Modifier.padding(top = 8.dp),
-        )
     }
 }
 
@@ -148,12 +141,7 @@ internal fun LazyListScope.contextualRuleRows(entries: List<AppEntry>) {
 
     item {
         Panel {
-            Text(text = "PULLS", style = HeaderStyle)
-            Text(
-                text = "One app's launch raising another for a window, then dropping off.",
-                style = NoteStyle,
-                modifier = Modifier.padding(bottom = 6.dp),
-            )
+            Text(text = "PULLS", style = HeaderStyle, modifier = Modifier.padding(bottom = 6.dp))
             ContextualRules.pulls.forEach { pull ->
                 Row(
                     modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
@@ -178,12 +166,9 @@ internal fun LazyListScope.contextualRuleRows(entries: List<AppEntry>) {
 
     item {
         Panel {
-            Text(text = "TRUST, BY VISIT LENGTH", style = HeaderStyle)
             Text(
-                text = "Decided when the visit ends. Under ${short(ContextualRules.TrustShortVisit)} " +
-                    "means the QR was not supported, so the fallback is raised. Longer means it " +
-                    "went through, so what needs reconciling is raised instead.",
-                style = NoteStyle,
+                text = "TRUST, SPLIT AT ${short(ContextualRules.TrustShortVisit)}",
+                style = HeaderStyle,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
             ContextualRules.trustShortPulls.forEach { (target, weight) ->
@@ -197,11 +182,9 @@ internal fun LazyListScope.contextualRuleRows(entries: List<AppEntry>) {
 
     item {
         Panel {
-            Text(text = "BASELINES AND MOTION", style = HeaderStyle)
             Text(
-                text = "Baselines apply before anything else. Walking is a nudge, because a phone " +
-                    "in a pocket reads as walking for much of the day; in a vehicle is not.",
-                style = NoteStyle,
+                text = "BASELINES AND MOTION",
+                style = HeaderStyle,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
             KeyValueWeighted("${name(ContextApps.PAYLAH)}, still", 55)
@@ -215,26 +198,20 @@ internal fun LazyListScope.contextualRuleRows(entries: List<AppEntry>) {
 
     item {
         Panel {
-            Text(text = "DORMANCY RAMPS", style = HeaderStyle)
+            Text(text = "DORMANCY RAMPS", style = HeaderStyle, modifier = Modifier.padding(bottom = 6.dp))
             ContextualRules.ramps.forEach { ramp ->
-                Text(
-                    text = "${name(ramp.packageName)} sits at ${signed(ramp.floor)} until day " +
-                        "${ramp.startDay}, then climbs to ${signed(ramp.peakScore)} by day " +
-                        "${ramp.peakDay} and stays there until it is opened.",
-                    style = BodyStyle,
-                    modifier = Modifier.padding(vertical = 3.dp),
-                )
+                Text(text = name(ramp.packageName), style = ValueStyle)
+                KeyValueWeighted("Before day ${ramp.startDay}", ramp.floor)
+                KeyValueWeighted("From day ${ramp.peakDay}", ramp.peakScore)
             }
         }
     }
 
     item {
         Panel {
-            Text(text = "THE REST", style = HeaderStyle)
             Text(
-                text = "Monthly reconciliation runs from day ${ContextualRules.ReconciliationDay} " +
-                    "until all three have been opened.",
-                style = NoteStyle,
+                text = "RECONCILIATION, FROM DAY ${ContextualRules.ReconciliationDay}",
+                style = HeaderStyle,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
             ContextualRules.reconciliation.forEach { (target, weight) ->

@@ -2,6 +2,7 @@ package com.wpinrui.harmoni.app
 
 import android.content.Context
 import android.content.Intent
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -17,6 +18,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,13 +26,19 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,6 +70,11 @@ fun LauncherAppScreen() {
     val context = LocalContext.current
     val entries by context.harmoni.appIndex.entries.collectAsState()
 
+    var open by remember { mutableStateOf(emptySet<String>()) }
+    val toggle: (String) -> Unit = { title ->
+        open = if (title in open) open - title else open + title
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -76,51 +89,100 @@ fun LauncherAppScreen() {
     ) {
         item { Masthead() }
 
-        item { SectionHeader("RING BINDINGS") }
-        ringBindingRows(entries)
+        section("RING BINDINGS", open, toggle) { ringBindingRows(entries) }
 
-        item { SectionHeader("GRAFFITI ALPHABET") }
-        item { AlphabetChart() }
-        item { OpenCaptureRow() }
-
-        item { SectionHeader("CONTEXTUAL RULES") }
-        contextualRuleRows(entries)
-
-        item { SectionHeader("PERMISSION HEALTH") }
-        item { PermissionHealth() }
-
-        item { SectionHeader("DIAGNOSTICS") }
-        item { DiagnosticsPanel() }
-
-        item { SectionHeader("BUILD") }
-        item { BuildInfo() }
-
-        item { SectionHeader("APPS, ${entries.size}") }
-        items(entries, key = { it.component.flattenToShortString() + it.user }) { entry ->
-            AppRow(entry)
+        section("GRAFFITI ALPHABET", open, toggle) {
+            item { AlphabetChart() }
+            item { OpenCaptureRow() }
         }
 
-        item { SectionHeader("ATTRIBUTIONS") }
-        item { Attributions() }
+        section("CONTEXTUAL RULES", open, toggle) { contextualRuleRows(entries) }
+
+        section("PERMISSION HEALTH", open, toggle) { item { PermissionHealth() } }
+
+        section("DIAGNOSTICS", open, toggle) { item { DiagnosticsPanel() } }
+
+        section("BUILD", open, toggle) { item { BuildInfo() } }
+
+        section("APPS, ${entries.size}", open, toggle) {
+            items(entries, key = { it.component.flattenToShortString() + it.user }) { entry ->
+                AppRow(entry)
+            }
+        }
+
+        section("ATTRIBUTIONS", open, toggle) { item { Attributions() } }
     }
 }
 
+/**
+ * A header and, when it is open, everything under it.
+ *
+ * Closed by default. Eight headers on one screen is an index of what the launcher is doing; the
+ * same page unrolled is several thousand pixels of reference material to scroll past to reach the
+ * one thing being looked up.
+ */
+private fun LazyListScope.section(
+    title: String,
+    open: Set<String>,
+    onToggle: (String) -> Unit,
+    body: LazyListScope.() -> Unit,
+) {
+    item { SectionHeader(title = title, open = title in open, onToggle = { onToggle(title) }) }
+    if (title in open) body()
+}
+
+/**
+ * The wordmark, with the A as a bare inverted V, as the mockups set it.
+ *
+ * Drawn rather than typed. The turned v the design uses is U+028C, which Karla does not carry, so
+ * a text glyph would fall back to whichever font on the device does and arrive at a different
+ * weight from the letters either side of it.
+ */
 @Composable
 private fun Masthead() {
-    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        Text(
-            text = "HARMONI",
-            style = TextStyle(
-                fontFamily = Karla,
-                fontWeight = FontWeight.ExtraLight,
-                fontSize = 44.sp,
-                letterSpacing = 0.14.em,
+    val unit = with(LocalDensity.current) { MastheadSize.toDp() }
+
+    Row(verticalAlignment = Alignment.Bottom) {
+        Text(text = "H", style = MastheadStyle)
+
+        Canvas(
+            modifier = Modifier
+                .padding(bottom = unit * DescentFraction, end = unit * TrackingFraction)
+                .size(width = unit * ApexWidthFraction, height = unit * CapHeightFraction),
+        ) {
+            val path = Path().apply {
+                moveTo(0f, size.height)
+                lineTo(size.width / 2f, 0f)
+                lineTo(size.width, size.height)
+            }
+            drawPath(
+                path = path,
                 color = Color.White,
-            ),
-        )
-        Text(text = "A read-only account of what the launcher is doing.", style = BodyStyle)
+                style = Stroke(width = unit.toPx() * StemFraction, cap = StrokeCap.Square),
+            )
+        }
+
+        Text(text = "RMONI", style = MastheadStyle)
     }
 }
+
+private val MastheadSize = 44.sp
+
+private val MastheadStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.ExtraLight,
+    fontSize = MastheadSize,
+    letterSpacing = 0.14.em,
+    color = Color.White,
+)
+
+// Karla's proportions at ExtraLight, so the drawn apex sits on the baseline at the same height and
+// weight as the capitals beside it.
+private const val CapHeightFraction = 0.70f
+private const val DescentFraction = 0.20f
+private const val ApexWidthFraction = 0.58f
+private const val StemFraction = 0.045f
+private const val TrackingFraction = 0.14f
 
 @Composable
 private fun PermissionHealth() {
@@ -156,13 +218,6 @@ private fun PermissionHealth() {
                 Text(text = if (live) "LIVE" else "OFF", style = ValueStyle)
             }
         }
-
-        Text(
-            text = "Media sessions ride on the notification listener being bound, which happens " +
-                "some time after the grant rather than at the moment of it.",
-            style = NoteStyle,
-            modifier = Modifier.padding(top = 8.dp),
-        )
     }
 }
 
@@ -191,11 +246,6 @@ private fun DiagnosticsPanel() {
                 .forEach { (letter, count) ->
                     KeyValue(letter.uppercase(), count.toString())
                 }
-            Text(
-                text = "A letter erased straight after it was drawn is the shape to redraw.",
-                style = NoteStyle,
-                modifier = Modifier.padding(top = 8.dp),
-            )
         }
 
         Text(
@@ -226,13 +276,7 @@ private fun OpenCaptureRow() {
 
     Panel(onClick = { context.startActivity(Intent(context, GraffitiCaptureActivity::class.java)) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(text = "Redraw the alphabet", style = BodyStyle.copy(color = Color.White))
-                Text(
-                    text = "Any letter redrawn replaces the bundled samples for that letter alone.",
-                    style = NoteStyle,
-                )
-            }
+            Text(text = "Redraw the alphabet", style = ValueStyle, modifier = Modifier.weight(1f))
             Text(text = "OPEN", style = ValueStyle.copy(color = Accent))
         }
     }
@@ -275,12 +319,19 @@ private fun Credit(context: Context, label: String, url: String) {
 // Shared furniture, so every section reads the same way down the page.
 
 @Composable
-internal fun SectionHeader(title: String) {
+internal fun SectionHeader(title: String, open: Boolean, onToggle: () -> Unit) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(top = 26.dp, bottom = 4.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .noRipple(onToggle)
+            .padding(top = 22.dp, bottom = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
     ) {
+        Text(
+            text = if (open) "▾" else "▸",
+            style = HeaderStyle.copy(color = Accent),
+        )
         Text(text = title, style = HeaderStyle)
         Box(
             modifier = Modifier
@@ -363,11 +414,10 @@ internal val NoteStyle = TextStyle(
 
 @Composable
 private fun AppRow(entry: AppEntry) {
+    // Section 4 matches against names and aliases. No aliases are defined yet, so an app resolves
+    // by its name alone and there is nothing to put beneath the package.
     Panel {
         Text(text = entry.label, style = ValueStyle)
         Text(text = entry.packageName, style = NoteStyle)
-        // Section 4 matches against names and aliases. No aliases are defined yet, so every app
-        // resolves by its name alone and this says so rather than showing an empty field.
-        Text(text = "No aliases", style = NoteStyle)
     }
 }
