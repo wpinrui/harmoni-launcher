@@ -5,6 +5,8 @@ import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import org.json.JSONArray
 import org.json.JSONObject
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
 import kotlin.math.round
 
@@ -68,7 +70,13 @@ object GraffitiStore {
      * capture intact rather than a truncated one. An alphabet is a couple of hundred draws and
      * losing it to a half-written file would be miserable.
      */
-    fun save(context: Context, samples: List<GraffitiSample>) {
+    private val writing = Mutex()
+
+    suspend fun save(context: Context, samples: List<GraffitiSample>) = writing.withLock {
+        writeNow(context, samples)
+    }
+
+    private fun writeNow(context: Context, samples: List<GraffitiSample>) {
         val file = file(context)
         val scratch = File(file.parentFile, "$FILE_NAME.tmp")
 

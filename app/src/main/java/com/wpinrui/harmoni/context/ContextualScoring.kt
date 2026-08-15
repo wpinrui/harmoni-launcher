@@ -21,6 +21,13 @@ data class ContextSnapshot(
     val sticky: Set<String>,
     /** Already reachable from the home surface, so never worth a ring slot. */
     val excluded: Set<String>,
+    /**
+     * Packages the launcher can actually open.
+     *
+     * Usage stats report every package that has run, most of which have no launcher activity, so
+     * a slot filled from them unchecked draws an empty circle that does nothing when tapped.
+     */
+    val launchable: Set<String>,
 )
 
 /** An app and why it earned its place, kept together so a ring can be explained after the fact. */
@@ -55,6 +62,7 @@ object ContextualScoring {
         val filler = snapshot.lastUsed.entries
             .sortedByDescending { it.value }
             .map { it.key }
+            .filter { it in snapshot.launchable }
             .filterNot { it in snapshot.excluded || it in scored }
 
         return (scored + filler).take(size)

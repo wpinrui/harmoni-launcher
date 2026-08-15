@@ -2,7 +2,7 @@ package com.wpinrui.harmoni.home
 
 import android.content.Context
 import androidx.core.content.edit
-import com.wpinrui.harmoni.app.SettingsRestart
+import com.wpinrui.harmoni.settings.PreferenceStore
 import com.wpinrui.harmoni.apps.AppEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,9 +15,10 @@ import kotlinx.coroutines.flow.asStateFlow
  * slot that was never touched still follows the source, and resetting one is a delete rather than
  * a restore.
  */
-object RingSlots {
+private const val FILE = "ring"
 
-    private const val FILE = "ring"
+object RingSlots : PreferenceStore(FILE) {
+
     private const val SLOT = "slot_"
     private const val SHOW_IN_SEARCH = "show_in_search"
 
@@ -36,10 +37,7 @@ object RingSlots {
      */
     val showInSearch: StateFlow<Boolean> = _showInSearch.asStateFlow()
 
-    private fun preferences(context: Context) =
-        context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-
-    fun load(context: Context) {
+    override fun load(context: Context) {
         val preferences = preferences(context)
 
         _overrides.value = preferences.all
@@ -57,13 +55,13 @@ object RingSlots {
     fun bind(context: Context, index: Int, packageName: String) {
         preferences(context).edit { putString("$SLOT$index", packageName) }
         _overrides.value = _overrides.value + (index to packageName)
-        SettingsRestart.mark()
+        settingChanged()
     }
 
     fun reset(context: Context, index: Int) {
         preferences(context).edit { remove("$SLOT$index") }
         _overrides.value = _overrides.value - index
-        SettingsRestart.mark()
+        settingChanged()
     }
 
     /** Hiding an app it is bound to takes it off the ring, back to whatever the source says. */
@@ -74,7 +72,7 @@ object RingSlots {
     fun setShowInSearch(context: Context, show: Boolean) {
         preferences(context).edit { putBoolean(SHOW_IN_SEARCH, show) }
         _showInSearch.value = show
-        SettingsRestart.mark()
+        settingChanged()
     }
 }
 
@@ -98,5 +96,8 @@ fun ringTargets(
             RingTarget.App(packageName, label)
         } ?: default
 
-        if (target.iconPackage in hidden) null else target
+        // Tested against the app a slot launches, not the package its icon comes from: a pinned
+        // web app borrows its browser's icon, and hiding the browser should not take the
+        // bookmark with it.
+        if ((target as? RingTarget.App)?.packageName in hidden) null else target
     }

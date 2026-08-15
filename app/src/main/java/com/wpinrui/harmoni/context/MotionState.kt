@@ -1,6 +1,7 @@
 package com.wpinrui.harmoni.context
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.BroadcastReceiver
 import android.content.Context
@@ -36,6 +37,12 @@ object MotionMonitor {
         _state.value = state
     }
 
+    /**
+     * Suppressed because the guard is the first thing here: lint follows a `checkSelfPermission`
+     * it can see inline, and cannot follow one behind [hasMotionPermission], which is where it
+     * belongs since three callers ask the same question.
+     */
+    @SuppressLint("MissingPermission")
     fun start(context: Context) {
         if (!context.hasMotionPermission()) {
             Log.i(TAG, "No activity recognition permission, motion stays unknown")

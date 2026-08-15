@@ -2,8 +2,11 @@ package com.wpinrui.harmoni.home
 
 import android.content.Context
 import android.content.Intent
+import android.content.pm.LauncherApps
 import android.util.Log
 import androidx.annotation.DrawableRes
+import com.wpinrui.harmoni.apps.AppEntry
+import com.wpinrui.harmoni.context.ContextApps
 import com.wpinrui.harmoni.R
 
 /**
@@ -15,7 +18,7 @@ import com.wpinrui.harmoni.R
 object HomeBindings {
     const val TELEGRAM = "org.telegram.messenger"
     const val INSTAGRAM = "com.instagram.android"
-    const val WHATSAPP = "com.whatsapp"
+    const val WHATSAPP = ContextApps.WHATSAPP
     const val YOUTUBE = "com.google.android.youtube"
     const val YOUTUBE_MUSIC = "com.google.android.apps.youtube.music"
 
@@ -31,7 +34,7 @@ object HomeBindings {
  * A badged app and the icon it wears on the block.
  *
  * The badges use drawn icons rather than the installed app's own, so the three read as one set at
- * 24dp. Attribution for them is in `README.md` and belongs on the launcher app screen.
+ * 24dp. Attribution for them is in `README.md` and on the launcher app screen.
  */
 data class Badge(val packageName: String, @param:DrawableRes val icon: Int)
 
@@ -43,6 +46,20 @@ fun Context.launchApp(packageName: String) {
         return
     }
     startActivity(intent)
+}
+
+/**
+ * Launches an indexed entry, in the profile it belongs to.
+ *
+ * [Context.launchApp] resolves only within the calling profile, so a work-profile app would be
+ * listed, would draw its icon, and would then do nothing when tapped. The index enumerates
+ * profiles deliberately and [AppEntry.user] is part of the identity, so the launch has to carry it.
+ */
+fun Context.launch(entry: AppEntry) {
+    val launcherApps = getSystemService(LauncherApps::class.java)
+
+    runCatching { launcherApps.startMainActivity(entry.component, entry.user, null, null) }
+        .onFailure { Log.w("HomeBindings", "Cannot launch ${entry.component}", it) }
 }
 
 /**

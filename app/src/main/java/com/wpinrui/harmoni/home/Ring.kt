@@ -31,6 +31,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import com.wpinrui.harmoni.apps.AppIcon
+import com.wpinrui.harmoni.ui.theme.noRipple
 import kotlin.math.cos
 import kotlin.math.roundToInt
 import kotlin.math.sin
@@ -178,20 +179,6 @@ private fun CentreButton(
                 .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
         )
     }
-}
-
-/**
- * No ripple anywhere in the ring: it sits on a wallpaper and a ripple would smear across it.
- *
- * Not enabled means the modifier is not applied at all, rather than applied and switched off.
- * A disabled `clickable` still installs its gesture node, and that node consumes the press even
- * though it does nothing with it, which silently swallows anything aimed at what lies beneath.
- */
-@Composable
-private fun Modifier.noRipple(enabled: Boolean = true, onClick: () -> Unit): Modifier {
-    if (!enabled) return this
-    val interactionSource = remember { MutableInteractionSource() }
-    return clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
 }
 
 private val RingEasing = CubicBezierEasing(0.2f, 0.8f, 0.3f, 1f)

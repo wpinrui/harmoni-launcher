@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -28,12 +29,16 @@ import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.AppIcon
 import com.wpinrui.harmoni.context.ContextApps
 import com.wpinrui.harmoni.context.ContextualRules
+import com.wpinrui.harmoni.context.MotionState
 import com.wpinrui.harmoni.graffiti.GraffitiLetters
 import com.wpinrui.harmoni.graffiti.GraffitiSample
 import com.wpinrui.harmoni.graffiti.GraffitiStore
 import com.wpinrui.harmoni.graffiti.GraffitiStrokeArt
 import com.wpinrui.harmoni.home.RingTarget
 import com.wpinrui.harmoni.home.iconPackage
+import com.wpinrui.harmoni.shortcuts.BoundShortcut
+import com.wpinrui.harmoni.shortcuts.ShortcutGesture
+import com.wpinrui.harmoni.ui.theme.Accent
 import java.time.Duration
 
 /**
@@ -88,6 +93,29 @@ internal fun LazyListScope.ringBindingRows(
                     text = if (showInSearch) "ON" else "OFF",
                     style = ValueStyle.copy(color = if (showInSearch) Accent else NoteStyle.color),
                 )
+            }
+        }
+    }
+}
+
+/** What each swipe up runs, and a way to change it. */
+internal fun LazyListScope.gestureShortcutRows(
+    bindings: Map<ShortcutGesture, BoundShortcut>,
+    onBind: (ShortcutGesture) -> Unit,
+) {
+    items(ShortcutGesture.entries.toList()) { gesture ->
+        val bound = bindings[gesture]
+
+        Panel(onClick = { onBind(gesture) }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = gesture.label, style = ValueStyle)
+                    Text(
+                        text = bound?.let { "${it.appLabel}, ${it.label}" } ?: "Nothing bound",
+                        style = NoteStyle,
+                    )
+                }
+                Text(text = "BIND", style = ValueStyle.copy(color = Accent))
             }
         }
     }
@@ -230,12 +258,33 @@ internal fun LazyListScope.contextualRuleRows(entries: List<AppEntry>) {
                 style = HeaderStyle,
                 modifier = Modifier.padding(bottom = 6.dp),
             )
-            KeyValueWeighted("${name(ContextApps.PAYLAH)}, still", 55)
-            KeyValueWeighted("${name(ContextApps.TRUST)}, still", 35)
-            KeyValueWeighted("${name(ContextApps.WALLET)}, always", 20)
-            KeyValueWeighted("Transit apps, walking", 10)
-            KeyValueWeighted("${name(ContextApps.MAPS)}, in a vehicle", 45)
-            KeyValueWeighted("Other transit apps, in a vehicle", 40)
+
+            // Read through the rules rather than retyped. This panel exists to report them, and a
+            // copy of the numbers would let it go on reporting the old ones after a change.
+            listOf(ContextApps.PAYLAH, ContextApps.TRUST, ContextApps.WALLET).forEach { app ->
+                val outside = ContextualRules.baseline(app, MotionState.STILL)
+                val driving = ContextualRules.baseline(app, MotionState.IN_VEHICLE)
+
+                if (outside == driving) {
+                    KeyValueWeighted("${name(app)}, always", outside)
+                } else {
+                    KeyValueWeighted("${name(app)}, not in a vehicle", outside)
+                    KeyValueWeighted("${name(app)}, in a vehicle", driving)
+                }
+            }
+
+            KeyValueWeighted(
+                "Transit apps, walking",
+                ContextualRules.motionBoost(ContextApps.MAPS, MotionState.WALKING),
+            )
+            KeyValueWeighted(
+                "${name(ContextApps.MAPS)}, in a vehicle",
+                ContextualRules.motionBoost(ContextApps.MAPS, MotionState.IN_VEHICLE),
+            )
+            KeyValueWeighted(
+                "Other transit apps, in a vehicle",
+                ContextualRules.motionBoost(ContextApps.GRAB, MotionState.IN_VEHICLE),
+            )
         }
     }
 

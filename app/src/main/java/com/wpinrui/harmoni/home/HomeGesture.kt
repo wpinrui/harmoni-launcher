@@ -53,7 +53,7 @@ fun Modifier.homeGestures(onGesture: (HomeGesture) -> Unit): Modifier = pointerI
     // gesture whose whole job is to be quick.
     val longPressTimeout = viewConfiguration.longPressTimeoutMillis * 2 / 3
     val doubleTapTimeout = viewConfiguration.doubleTapTimeoutMillis
-    val swipeTravel = SwipeUpTravel.toPx()
+    val swipeTravel = SwipeTravel.toPx()
 
     // Both halves of a double tap are seen by this one handler, so nothing that appears in
     // between, the ring above all, can take the second one off it.
@@ -196,7 +196,6 @@ internal fun isStraightSwipe(
 /** Far enough that it cannot be a flick, short enough to stay inside the surface. */
 internal val SwipeTravel = 72.dp
 
-private val SwipeUpTravel = SwipeTravel
 private const val VerticalBias = 2f
 private const val Straightness = 0.85f
 

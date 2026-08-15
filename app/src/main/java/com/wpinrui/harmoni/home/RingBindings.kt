@@ -6,6 +6,7 @@ import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.core.net.toUri
 import com.wpinrui.harmoni.R
+import com.wpinrui.harmoni.context.ContextApps
 
 /**
  * What sits on a ring position.
@@ -49,7 +50,7 @@ object RingBindings {
         RingTarget.App("com.anthropic.claude", "Claude"),
         RingTarget.App("com.google.android.GoogleCamera", "Camera"),
         RingTarget.App("com.google.android.apps.photos", "Gallery"),
-        RingTarget.App("com.google.android.calendar", "Calendar"),
+        RingTarget.App(ContextApps.CALENDAR, "Calendar"),
         RingTarget.App("sg.ndi.sp", "Singpass"),
         RingTarget.App("com.google.android.keep", "Keep"),
     )

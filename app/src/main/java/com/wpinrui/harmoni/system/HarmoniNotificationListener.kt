@@ -1,5 +1,6 @@
 package com.wpinrui.harmoni.system
 
+import android.app.Notification
 import android.content.ComponentName
 import android.content.Context
 import android.provider.Settings
@@ -38,7 +39,13 @@ class HarmoniNotificationListener : NotificationListenerService() {
         // activeNotifications throws if the binding has already gone away, which happens on the
         // way down; an empty map is the honest answer at that point.
         val active = runCatching { activeNotifications }.getOrNull() ?: return
-        val (ongoing, unread) = active.partition { it.isOngoing }
+
+        // A group summary stands for the conversations under it rather than being one of them,
+        // so counting it shows one more than the app has.
+        val posted = active.filterNot {
+            it.notification.flags and Notification.FLAG_GROUP_SUMMARY != 0
+        }
+        val (ongoing, unread) = posted.partition { it.isOngoing }
 
         NotificationCounts.set(
             counts = unread.groupingBy { it.packageName }.eachCount(),

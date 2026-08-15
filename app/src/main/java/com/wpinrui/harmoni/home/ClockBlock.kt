@@ -41,6 +41,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -58,7 +59,6 @@ import com.wpinrui.harmoni.system.rememberNowPlaying
 import com.wpinrui.harmoni.ui.theme.Karla
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * The one composed block on the home surface: clock, date, battery, notification badges, the
@@ -124,10 +124,14 @@ private fun BlockContent(
 
 @Composable
 private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
-    val timeFormat = remember(state.is24Hour) {
-        DateTimeFormatter.ofPattern(if (state.is24Hour) "H:mm" else "h:mm", Locale.getDefault())
+    // Read from the composition rather than from Locale.getDefault(), which is not observable:
+    // changing the system language would otherwise leave the date in the old one until something
+    // else forced a recomposition.
+    val locale = LocalLocale.current.platformLocale
+    val timeFormat = remember(state.is24Hour, locale) {
+        DateTimeFormatter.ofPattern(if (state.is24Hour) "H:mm" else "h:mm", locale)
     }
-    val dateFormat = remember { DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()) }
+    val dateFormat = remember(locale) { DateTimeFormatter.ofPattern("EEE d MMM", locale) }
 
     val context = LocalContext.current
 
@@ -149,7 +153,7 @@ private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
 
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                text = state.time.format(dateFormat).uppercase(Locale.getDefault()),
+                text = state.time.format(dateFormat).uppercase(locale),
                 modifier = Modifier.tappable(!shadowPass) {
                     context.launchOrLog(calendarIntent(), "the calendar")
                 },

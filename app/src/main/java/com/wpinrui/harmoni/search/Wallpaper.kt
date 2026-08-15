@@ -54,16 +54,6 @@ object WallpaperCache {
 
 fun Context.canReadWallpaper(): Boolean = Environment.isExternalStorageManager()
 
-/** Takes the user to the all-files toggle, which is a Settings screen rather than a prompt. */
-fun Context.requestWallpaperAccess() {
-    startActivity(
-        Intent(
-            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-            "package:$packageName".toUri(),
-        ),
-    )
-}
-
 private fun Context.readWallpaper(): ImageBitmap? {
     if (!canReadWallpaper()) {
         Log.i(TAG, "No all-files access, so no wallpaper to blur")

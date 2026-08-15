@@ -1,27 +1,10 @@
 package com.wpinrui.harmoni.app
 
-import android.graphics.Color
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
-import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
-import com.wpinrui.harmoni.ui.theme.HarmoniTheme
+import androidx.compose.runtime.Composable
 
 /** The hidden apps list, opened from the launcher app screen. */
-class HiddenAppsActivity : ComponentActivity() {
+class HiddenAppsActivity : HarmoniActivity() {
 
-    override fun onCreate(savedInstanceState: Bundle?) {
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
-        )
-        super.onCreate(savedInstanceState)
-
-        setContent {
-            HarmoniTheme {
-                HiddenAppsScreen()
-            }
-        }
-    }
+    @Composable
+    override fun Content() = HiddenAppsScreen()
 }

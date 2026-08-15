@@ -14,7 +14,7 @@ On the empty surface:
 | --- | --- |
 | Tap | A ring of eight fixed apps, centred on your finger |
 | Long press | A ring of eight apps scored for the moment |
-| Double tap | Every installed app |
+| Double tap | Every app, less hidden ones and the ring's eight |
 | Write a letter, lower half | Search, filtered by what you wrote |
 | Swipe down, upper half | Notification shade |
 | Swipe up | A bound app shortcut |
@@ -24,9 +24,13 @@ Both rings pick on the next tap and dismiss on the centre or anywhere outside. T
 and the ring centres itself at the closest point where all eight still fit, rather than refusing
 the tap.
 
+The ring's eight are left out of the app views by default, since they are already one tap away; a
+toggle on the launcher app screen puts them back.
+
 In the search view, further letters are drawn in the space below the grid, a right to left swipe
 erases one, tapping an icon launches it and holding one opens its page in Settings. Tapping away
-from the grid closes the view, as does coming home.
+from the grid closes the view, as does coming home. The writing area is the exception: a tap
+there does nothing, so a letter that came out too small cannot dismiss everything.
 
 On the clock block, the time opens the clock, the date opens the calendar at today, the battery
 opens battery settings, and the badges, music element and YouTube link open their apps.
@@ -37,7 +41,7 @@ Opening Harmoni from the app list gives a screen that reports what the launcher 
 you change the parts that are yours:
 
 - **Ring bindings.** Any of the eight positions can be rebound to another app, or reset to the one
-  in source.
+  in source. A toggle here decides whether the ring's apps also appear in search.
 - **Gesture shortcuts.** Either swipe up can be bound to an app shortcut, the kind other launchers
   show on a long press of an icon.
 - **Hidden apps.** Checked means hidden. A hidden app never appears anywhere Harmoni offers an app,
@@ -128,6 +132,11 @@ Then choose Harmoni under Settings, Apps, Default apps, Home app.
 | `app/src/main/java/com/wpinrui/harmoni/context/` | The contextual ring's rules and the signals feeding them |
 | `app/src/main/java/com/wpinrui/harmoni/app/` | The launcher app screen and its pickers |
 | `app/src/main/java/com/wpinrui/harmoni/apps/` | The installed-app index, icons and the hidden list |
+| `app/src/main/java/com/wpinrui/harmoni/shortcuts/` | App shortcut querying and gesture bindings |
+| `app/src/main/java/com/wpinrui/harmoni/system/` | Notifications, media sessions, clock and battery, accessibility |
+| `app/src/main/java/com/wpinrui/harmoni/settings/` | The shared preference-backed store |
+| `app/src/main/java/com/wpinrui/harmoni/diagnostics/` | Diagnostic counters |
+| `app/src/main/java/com/wpinrui/harmoni/ui/theme/` | Colours, type and the shared no-ripple modifier |
 
 [GDD.md](GDD.md) describes the behaviour. The launcher is the source of truth and the document
 follows it. Work is tracked in [issues](https://github.com/wpinrui/harmoni-launcher/issues).

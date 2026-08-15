@@ -2,7 +2,7 @@ package com.wpinrui.harmoni.shortcuts
 
 import android.content.Context
 import androidx.core.content.edit
-import com.wpinrui.harmoni.app.SettingsRestart
+import com.wpinrui.harmoni.settings.PreferenceStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,21 +28,18 @@ data class BoundShortcut(
 )
 
 /** Shortcuts bound to gestures, per Harmoni's own settings rather than the GDD's fixed set. */
-object GestureBindings {
+private const val FILE = "gesture_bindings"
 
-    private const val FILE = "gesture_bindings"
+object GestureBindings : PreferenceStore(FILE) {
 
     private val _bindings = MutableStateFlow<Map<ShortcutGesture, BoundShortcut>>(emptyMap())
     val bindings: StateFlow<Map<ShortcutGesture, BoundShortcut>> = _bindings.asStateFlow()
-
-    private fun preferences(context: Context) =
-        context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
 
     // A field per key rather than one packed string: a shortcut's label is the app's own text and
     // can contain anything, including whatever separator seemed safe.
     private fun key(gesture: ShortcutGesture, field: String) = "${gesture.name}_$field"
 
-    fun load(context: Context) {
+    override fun load(context: Context) {
         val preferences = preferences(context)
 
         _bindings.value = ShortcutGesture.entries.mapNotNull { gesture ->
@@ -75,7 +72,7 @@ object GestureBindings {
                 appLabel = shortcut.appLabel,
             )
             )
-        SettingsRestart.mark()
+        settingChanged()
     }
 
     fun clear(context: Context, gesture: ShortcutGesture) {
@@ -83,7 +80,7 @@ object GestureBindings {
             listOf("package", "id", "label", "app").forEach { remove(key(gesture, it)) }
         }
         _bindings.value = _bindings.value - gesture
-        SettingsRestart.mark()
+        settingChanged()
     }
 
     fun start(context: Context, gesture: ShortcutGesture) {

@@ -14,8 +14,6 @@ import androidx.compose.ui.geometry.Offset
  */
 class GraffitiAlphabet(private val templates: List<GraffitiTemplate>) {
 
-    val isEmpty: Boolean get() = templates.isEmpty()
-
     fun recognise(points: List<Offset>): GraffitiMatch? =
         GraffitiRecogniser.recognise(points, templates)
 
