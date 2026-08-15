@@ -22,6 +22,16 @@
         android:name="android.permission.PACKAGE_USAGE_STATS"
         tools:ignore="ProtectedPermissions" />
 
+    <!--
+        The wallpaper, so the search view can draw a blurred copy of it. The window manager can
+        only blur what is behind a window, and the wallpaper is drawn by this one, so the blur has
+        to be ours. Reading it is gated on all-files access rather than image access, which is a
+        toggle in Settings rather than a prompt. Without it the search view keeps its tint alone.
+    -->
+    <uses-permission
+        android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
+        tools:ignore="ScopedStorage" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

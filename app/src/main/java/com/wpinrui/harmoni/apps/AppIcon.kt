@@ -40,3 +40,18 @@ fun AppIcon(packageName: String, size: Dp, modifier: Modifier = Modifier) {
         Image(bitmap = bitmap, contentDescription = null, modifier = modifier.size(size))
     }
 }
+
+/** The same, for an entry already in hand, which is how the search grid draws its results. */
+@Composable
+fun AppEntryIcon(entry: AppEntry, size: Dp, modifier: Modifier = Modifier) {
+    val app = LocalContext.current.harmoni
+    val sizePx = with(LocalDensity.current) { size.roundToPx() }
+
+    val bitmap: ImageBitmap? = remember(entry, sizePx) {
+        app.iconResolver.iconFor(entry)?.toBitmap(width = sizePx, height = sizePx)?.asImageBitmap()
+    }
+
+    if (bitmap != null) {
+        Image(bitmap = bitmap, contentDescription = entry.label, modifier = modifier.size(size))
+    }
+}
