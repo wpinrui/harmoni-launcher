@@ -40,6 +40,10 @@ import kotlin.math.sin
  *
  * The same ring serves Sections 2 and 3: the fixed eight on a tap, a scored eight on a long press.
  *
+ * Inert until [interactive], which the surface withholds while a second tap could still arrive.
+ * Otherwise the icons, which bunch over the centre as they grow out, would take that tap: they are
+ * drawn after the centre and so are hit-tested before it, disabled or not.
+ *
  * Two-stage by construction: the tap that summoned it is already spent, so the next tap is the
  * pick. The centre dismisses, and so does anywhere outside an icon, since a ring you cannot get
  * rid of by tapping away would be a trap.
@@ -54,6 +58,7 @@ fun Ring(
     slots: List<RingTarget>,
     onPick: (RingTarget) -> Unit,
     onDismiss: () -> Unit,
+    interactive: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     var appeared by remember { mutableStateOf(false) }
@@ -62,9 +67,9 @@ fun Ring(
     Box(
         modifier = modifier
             .fillMaxSize()
-            .noRipple(onDismiss),
+            .noRipple(enabled = interactive, onClick = onDismiss),
     ) {
-        CentreButton(centre = centre, appeared = appeared, onDismiss = onDismiss)
+        CentreButton(centre = centre, appeared = appeared, interactive = interactive, onDismiss = onDismiss)
 
         slots.forEachIndexed { index, target ->
             val progress by animateFloatAsState(
@@ -82,6 +87,7 @@ fun Ring(
                 centre = centre,
                 index = index,
                 progress = progress,
+                interactive = interactive,
                 onPick = onPick,
             )
         }
@@ -94,6 +100,7 @@ private fun RingIcon(
     centre: Offset,
     index: Int,
     progress: Float,
+    interactive: Boolean,
     onPick: (RingTarget) -> Unit,
 ) {
     val density = LocalDensity.current
@@ -116,7 +123,10 @@ private fun RingIcon(
             .clip(CircleShape)
             .background(Color.White.copy(alpha = 0.15f))
             .border(1.dp, Color.White.copy(alpha = 0.3f), CircleShape)
-            .noRipple { onPick(target) },
+            // An icon in flight is a moving target, and the second tap of a double tap would
+            // land on whichever one happened to be passing. Nothing is pickable until it has
+            // arrived, which also keeps the centre unambiguous for the whole double-tap window.
+            .noRipple(enabled = interactive && progress >= 1f) { onPick(target) },
         contentAlignment = Alignment.Center,
     ) {
         val bundled = (target as? RingTarget.Web)?.icon
@@ -133,7 +143,12 @@ private fun RingIcon(
 }
 
 @Composable
-private fun CentreButton(centre: Offset, appeared: Boolean, onDismiss: () -> Unit) {
+private fun CentreButton(
+    centre: Offset,
+    appeared: Boolean,
+    interactive: Boolean,
+    onDismiss: () -> Unit,
+) {
     val scale by animateFloatAsState(
         targetValue = if (appeared) 1f else 0.5f,
         animationSpec = tween(durationMillis = 220, easing = RingEasing),
@@ -141,28 +156,44 @@ private fun CentreButton(centre: Offset, appeared: Boolean, onDismiss: () -> Uni
     )
     var size by remember { mutableStateOf(0) }
 
+    // The touch area is wider than the drawn circle. A second tap is aimed from memory rather
+    // than at something you are looking at, so it drifts, and a 52dp target is about 4mm.
     Box(
         modifier = Modifier
             .offset { IntOffset((centre.x - size / 2).roundToInt(), (centre.y - size / 2).roundToInt()) }
-            .size(CentreSize)
+            .size(CentreTouchSize)
             .onSizeChanged { size = it.width }
-            .scale(scale)
-            .clip(CircleShape)
-            .background(Color.White.copy(alpha = 0.06f))
-            .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape)
-            .noRipple(onDismiss),
-    )
+            .noRipple(enabled = interactive, onClick = onDismiss),
+        contentAlignment = Alignment.Center,
+    ) {
+        Box(
+            modifier = Modifier
+                .size(CentreSize)
+                .scale(scale)
+                .clip(CircleShape)
+                .background(Color.White.copy(alpha = 0.06f))
+                .border(1.dp, Color.White.copy(alpha = 0.4f), CircleShape),
+        )
+    }
 }
 
-/** No ripple anywhere in the ring: it sits on a wallpaper and a ripple would smear across it. */
+/**
+ * No ripple anywhere in the ring: it sits on a wallpaper and a ripple would smear across it.
+ *
+ * Not enabled means the modifier is not applied at all, rather than applied and switched off.
+ * A disabled `clickable` still installs its gesture node, and that node consumes the press even
+ * though it does nothing with it, which silently swallows anything aimed at what lies beneath.
+ */
 @Composable
-private fun Modifier.noRipple(onClick: () -> Unit): Modifier {
+private fun Modifier.noRipple(enabled: Boolean = true, onClick: () -> Unit): Modifier {
+    if (!enabled) return this
     val interactionSource = remember { MutableInteractionSource() }
     return clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
 }
 
 private val RingEasing = CubicBezierEasing(0.2f, 0.8f, 0.3f, 1f)
 private val CentreSize = 52.dp
+private val CentreTouchSize = 88.dp
 private val IconArtSize = 40.dp
 private const val CollapsedReach = 0.12f
 private const val CollapsedScale = 0.4f

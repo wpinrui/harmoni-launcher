@@ -1,5 +1,6 @@
 package com.wpinrui.harmoni
 
+import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -12,6 +13,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.wpinrui.harmoni.context.MotionMonitor
 import com.wpinrui.harmoni.context.hasMotionPermission
+import com.wpinrui.harmoni.home.HomePresses
 import com.wpinrui.harmoni.home.HomeSurface
 import com.wpinrui.harmoni.ui.theme.HarmoniTheme
 
@@ -59,5 +61,14 @@ class HomeActivity : ComponentActivity() {
         }
 
         onBackPressedDispatcher.addCallback(this) {}
+    }
+
+    /**
+     * Pressing or swiping home while Harmoni is already the top activity arrives here, since the
+     * activity is never recreated. It is the only signal that the gesture happened.
+     */
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        HomePresses.record()
     }
 }

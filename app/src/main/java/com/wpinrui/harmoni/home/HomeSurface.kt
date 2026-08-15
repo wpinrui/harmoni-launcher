@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -16,6 +17,9 @@ import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import com.wpinrui.harmoni.context.ContextualRing
 import androidx.compose.ui.platform.LocalDensity
+import kotlinx.coroutines.delay
+import androidx.compose.ui.platform.LocalViewConfiguration
+import com.wpinrui.harmoni.search.SearchSurface
 
 /**
  * The surface the rest of the launcher is built on.
@@ -31,8 +35,26 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     var rejectCount by remember { mutableIntStateOf(0) }
     var ringCentre by remember { mutableStateOf<Offset?>(null) }
     var slots by remember { mutableStateOf(RingBindings.slots) }
+    var ringInteractive by remember { mutableStateOf(true) }
+    var searchOpen by remember { mutableStateOf(false) }
+    val doubleTapWindow = LocalViewConfiguration.current.doubleTapTimeoutMillis
     val context = LocalContext.current
     val contextual = remember(context) { ContextualRing(context) }
+
+    // Coming home while the ring or the app list is up means "get me back to the wallpaper".
+    LaunchedEffect(Unit) {
+        HomePresses.presses.collect {
+            searchOpen = false
+            ringCentre = null
+        }
+    }
+
+    LaunchedEffect(ringCentre) {
+        if (ringCentre != null && !ringInteractive) {
+            delay(doubleTapWindow)
+            ringInteractive = true
+        }
+    }
 
     Box(
         modifier = modifier
@@ -43,15 +65,25 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                     is HomeGesture.Tap ->
                         if (RingPlacement.fits(gesture.position, surface, density)) {
                             slots = RingBindings.slots
+                            // Deaf until the moment a second tap could no longer arrive, so the
+                            // surface keeps both halves of a double tap.
+                            ringInteractive = false
                             ringCentre = gesture.position
                         } else {
                             rejectCount++
                             Log.d(TAG, "Tap rejected, too near an edge: ${gesture.position}")
                         }
 
+                    is HomeGesture.DoubleTap -> {
+                        ringCentre = null
+                        searchOpen = true
+                    }
+
                     is HomeGesture.LongPress ->
                         if (RingPlacement.fits(gesture.position, surface, density)) {
                             slots = contextual.slots()
+                            // A long press cannot be half a double tap, so this one is live at once.
+                            ringInteractive = true
                             ringCentre = gesture.position
                         } else {
                             rejectCount++
@@ -78,6 +110,17 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                     Log.d(TAG, "Ring dismissed without a pick")
                     ringCentre = null
                 },
+                interactive = ringInteractive,
+            )
+        }
+
+        if (searchOpen) {
+            SearchSurface(
+                onLaunch = { entry ->
+                    searchOpen = false
+                    context.launchApp(entry.packageName)
+                },
+                onClose = { searchOpen = false },
             )
         }
     }

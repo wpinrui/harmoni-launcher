@@ -4,6 +4,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.pointerInput
@@ -19,6 +20,9 @@ sealed interface HomeGesture {
 
     /** Down and up in one place: summon the ring. */
     data class Tap(val position: Offset) : HomeGesture
+
+    /** A second tap in the same place, soon after the first: the all apps view. */
+    data class DoubleTap(val position: Offset) : HomeGesture
 
     /** Held in one place past the long-press timeout: summon the contextual ring. */
     data class LongPress(val position: Offset) : HomeGesture
@@ -37,11 +41,46 @@ sealed interface HomeGesture {
 fun Modifier.homeGestures(onGesture: (HomeGesture) -> Unit): Modifier = pointerInput(Unit) {
     val touchSlop = viewConfiguration.touchSlop
     val longPressTimeout = viewConfiguration.longPressTimeoutMillis
+    val doubleTapTimeout = viewConfiguration.doubleTapTimeoutMillis
+
+    // Both halves of a double tap are seen by this one handler, so nothing that appears in
+    // between, the ring above all, can take the second one off it.
+    var lastTapAt = 0L
+    var lastTapPosition = Offset.Unspecified
 
     awaitEachGesture {
-        awaitHomeGesture(touchSlop, longPressTimeout, onGesture)
+        awaitHomeGesture(touchSlop, longPressTimeout) { gesture ->
+            if (gesture !is HomeGesture.Tap) {
+                lastTapAt = 0L
+                onGesture(gesture)
+                return@awaitHomeGesture
+            }
+
+            val now = android.os.SystemClock.uptimeMillis()
+            val soon = now - lastTapAt <= doubleTapTimeout
+            val nearby = lastTapPosition.isSpecified &&
+                (gesture.position - lastTapPosition).getDistance() <= doubleTapSlop
+
+            if (soon && nearby) {
+                // Spent, so a third tap starts a fresh pair rather than continuing this one.
+                lastTapAt = 0L
+                onGesture(HomeGesture.DoubleTap(gesture.position))
+            } else {
+                lastTapAt = now
+                lastTapPosition = gesture.position
+                onGesture(gesture)
+            }
+        }
     }
 }
+
+/**
+ * How far the second tap may drift from the first.
+ *
+ * Wider than touch slop, because the second tap is aimed from memory at a place the finger has
+ * already left, rather than tracked against something on screen.
+ */
+private val doubleTapSlop = 96f
 
 /**
  * Emits through [emit] rather than returning, because the three gestures resolve at different
