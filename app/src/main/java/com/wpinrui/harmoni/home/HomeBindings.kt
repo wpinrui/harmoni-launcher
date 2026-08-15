@@ -1,6 +1,7 @@
 package com.wpinrui.harmoni.home
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import androidx.annotation.DrawableRes
 import com.wpinrui.harmoni.R
@@ -42,4 +43,16 @@ fun Context.launchApp(packageName: String) {
         return
     }
     startActivity(intent)
+}
+
+/**
+ * Starts [intent], and does nothing louder than a log if nothing can handle it.
+ *
+ * The clock block's targets are all standard actions, but which app answers them is the device's
+ * business, and on a device where none does, a tap on the time should be a tap that did nothing
+ * rather than a crash on the home screen.
+ */
+fun Context.launchOrLog(intent: Intent, what: String) {
+    runCatching { startActivity(intent) }
+        .onFailure { Log.w("HomeBindings", "Nothing handles $what", it) }
 }

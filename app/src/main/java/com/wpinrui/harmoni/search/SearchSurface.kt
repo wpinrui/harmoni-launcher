@@ -1,7 +1,11 @@
 package com.wpinrui.harmoni.search
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -58,6 +62,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.AppEntryIcon
 import com.wpinrui.harmoni.apps.HiddenApps
@@ -121,7 +126,9 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
         label = "search-entrance",
     )
 
-    BackHandler(onBack = onClose)
+    // Back is swallowed rather than closing the view. It leaves the ways out that are gestures on
+    // the surface itself: tapping away from the grid, and coming home.
+    BackHandler {}
 
     Box(
         modifier = Modifier
@@ -147,6 +154,13 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
                 AppPage(
                     apps = results.drop(page * PerPage).take(PerPage),
                     onLaunch = onLaunch,
+                    onInfo = { entry ->
+                        val details = Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            "package:${entry.packageName}".toUri(),
+                        )
+                        runCatching { context.startActivity(details) }
+                    },
                 )
             }
 
@@ -217,7 +231,11 @@ private fun ResultSummary(count: Int) {
 }
 
 @Composable
-private fun AppPage(apps: List<AppEntry>, onLaunch: (AppEntry) -> Unit) {
+private fun AppPage(
+    apps: List<AppEntry>,
+    onLaunch: (AppEntry) -> Unit,
+    onInfo: (AppEntry) -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -230,7 +248,12 @@ private fun AppPage(apps: List<AppEntry>, onLaunch: (AppEntry) -> Unit) {
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 row.forEach { entry ->
-                    AppCell(entry = entry, onLaunch = onLaunch, modifier = Modifier.weight(1f))
+                    AppCell(
+                        entry = entry,
+                        onLaunch = onLaunch,
+                        onInfo = onInfo,
+                        modifier = Modifier.weight(1f),
+                    )
                 }
                 // Keeps a short last row aligned with the one above it.
                 repeat(Columns - row.size) { Box(modifier = Modifier.weight(1f)) }
@@ -239,10 +262,24 @@ private fun AppPage(apps: List<AppEntry>, onLaunch: (AppEntry) -> Unit) {
     }
 }
 
+/** Tap launches. Holding opens the app's own page in Settings, which is where uninstall lives. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun AppCell(entry: AppEntry, onLaunch: (AppEntry) -> Unit, modifier: Modifier = Modifier) {
+private fun AppCell(
+    entry: AppEntry,
+    onLaunch: (AppEntry) -> Unit,
+    onInfo: (AppEntry) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val interactionSource = remember { MutableInteractionSource() }
+
     Column(
-        modifier = modifier.noRipple { onLaunch(entry) },
+        modifier = modifier.combinedClickable(
+            interactionSource = interactionSource,
+            indication = null,
+            onClick = { onLaunch(entry) },
+            onLongClick = { onInfo(entry) },
+        ),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(9.dp),
     ) {
@@ -346,9 +383,10 @@ private fun ColumnScope.GraffitiInput(
 
                     drawing = false
 
+                    // A tap in here does nothing. This is the writing area, and closing the view
+                    // out from under a letter that came out too small would be its own bug.
                     val span = spanOf(points)
                     when {
-                        span < tapSpan -> onTap()
                         span < letterSpan -> Unit
                         isBackspaceStroke(points, backspaceSpan) -> onBackspace()
                         else -> recognise(points.toList())?.let(onLetter)

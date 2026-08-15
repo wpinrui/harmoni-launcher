@@ -57,6 +57,9 @@ import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.home.RingSlots
 import com.wpinrui.harmoni.home.ringTargets
 import com.wpinrui.harmoni.search.canReadWallpaper
+import com.wpinrui.harmoni.shortcuts.GestureBindings
+import com.wpinrui.harmoni.shortcuts.ShortcutGesture
+import com.wpinrui.harmoni.system.HarmoniAccessibilityService
 import com.wpinrui.harmoni.system.HarmoniNotificationListener
 import com.wpinrui.harmoni.system.NotificationAccess
 import com.wpinrui.harmoni.system.hasNotificationAccess
@@ -91,6 +94,25 @@ fun LauncherAppScreen() {
     val showRingInSearch by RingSlots.showInSearch.collectAsState()
     val slots = remember(overrides, entries, hidden) { ringTargets(overrides, entries, hidden) }
     var editing by remember { mutableStateOf<Int?>(null) }
+
+    val gestureBindings by GestureBindings.bindings.collectAsState()
+    var binding by remember { mutableStateOf<ShortcutGesture?>(null) }
+
+    binding?.let { gesture ->
+        ShortcutPicker(
+            gestureLabel = gesture.label,
+            bound = gesture in gestureBindings,
+            onPick = { shortcut ->
+                GestureBindings.bind(context, gesture, shortcut)
+                binding = null
+            },
+            onClear = {
+                GestureBindings.clear(context, gesture)
+                binding = null
+            },
+            onDismiss = { binding = null },
+        )
+    }
 
     editing?.let { index ->
         RingPicker(
@@ -129,6 +151,26 @@ fun LauncherAppScreen() {
                 onEdit = { editing = it },
                 onToggleSearch = { RingSlots.setShowInSearch(context, it) },
             )
+        }
+
+        section("GESTURE SHORTCUTS", open, toggle) {
+            ShortcutGesture.entries.forEach { gesture ->
+                item {
+                    val bound = gestureBindings[gesture]
+                    Panel(onClick = { binding = gesture }) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(text = gesture.label, style = ValueStyle)
+                                Text(
+                                    text = bound?.let { "${it.appLabel}, ${it.label}" } ?: "Nothing bound",
+                                    style = NoteStyle,
+                                )
+                            }
+                            Text(text = "BIND", style = ValueStyle.copy(color = Accent))
+                        }
+                    }
+                }
+            }
         }
 
         section("HIDDEN APPS", open, toggle) {
@@ -223,6 +265,7 @@ private val MastheadStyle = TextStyle(
 private fun PermissionHealth() {
     val context = LocalContext.current
     val listenerBound by NotificationAccess.connected.collectAsState()
+    val shadeBound by HarmoniAccessibilityService.connected.collectAsState()
 
     // These are granted in Settings, in another task, so nothing here changes while the screen is
     // in front of you. Coming back is the moment the answer has just changed, and the only moment
@@ -233,13 +276,14 @@ private fun PermissionHealth() {
         onPauseOrDispose {}
     }
 
-    val granted by produceState(initialValue = emptyList<Permission>(), context, listenerBound, resumes) {
+    val granted by produceState(initialValue = emptyList<Permission>(), context, listenerBound, shadeBound, resumes) {
         value = listOf(
             Permission("Notification listener", context.hasNotificationAccess(), notificationIntent(context)),
             Permission("Media sessions", listenerBound, notificationIntent(context)),
             Permission("Usage access", context.hasUsageAccess(), usageAccessIntent(context)),
             Permission("Motion", context.hasMotionPermission(), appDetailsIntent(context)),
             Permission("Wallpaper, all files access", context.canReadWallpaper(), allFilesIntent(context)),
+            Permission("Notification shade", shadeBound, accessibilityIntent()),
         )
     }
 
@@ -289,6 +333,9 @@ private fun allFilesIntent(context: Context) =
 /** Motion is an ordinary runtime permission, so its switch is on the app's own page. */
 private fun appDetailsIntent(context: Context) =
     Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, context.selfUri())
+
+/** No per-app deep link exists for accessibility, so this is the list Harmoni appears in. */
+private fun accessibilityIntent() = Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)
 
 private fun Context.selfUri() = "package:$packageName".toUri()
 
