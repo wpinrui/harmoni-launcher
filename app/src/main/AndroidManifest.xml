@@ -69,6 +69,22 @@
         </activity>
 
         <!--
+            The alphabet capture tool. LAUNCHER rather than a route off the home surface, so it
+            shows up in Harmoni's own all apps grid and is reached by typing its name. Nothing
+            about it belongs on a gesture.
+        -->
+        <activity
+            android:name=".graffiti.GraffitiCaptureActivity"
+            android:exported="true"
+            android:label="@string/graffiti_capture"
+            android:theme="@style/Theme.Harmoni">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!--
             Bound by the system once notification access is granted by hand in Settings. It feeds
             the badge counts, and its component is also the token that lets Harmoni read active
             media sessions for the music element.
