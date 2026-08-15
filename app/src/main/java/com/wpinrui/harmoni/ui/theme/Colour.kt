@@ -14,3 +14,6 @@ val Ground = Color(0xFF120E0C)
 
 /** Anything the eye is meant to go to first: a section title, an action, the start of a stroke. */
 val Accent = Color(0xFFE8B979)
+
+/** Labels and counts that sit beside the thing they describe rather than being it. */
+val Meta = Color(0xFFCFC6BD)

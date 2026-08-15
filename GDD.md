@@ -236,8 +236,8 @@ you already are.
 - Diagnostics
 - Build info, version, build date, commit
 
-Ring bindings, hidden apps, the alphabet chart, permission health and attributions are open when
-the screen appears. The contextual rules, diagnostics and build info are reference and start
+Ring bindings, the alphabet chart, permission health and attributions are open when the screen
+appears. Gesture shortcuts, hidden apps, the contextual rules, diagnostics and build info start
 collapsed.
 
 **Hidden apps**

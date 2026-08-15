@@ -2,14 +2,14 @@ package com.wpinrui.harmoni.app
 
 import androidx.compose.foundation.lazy.items
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.AppEntryIcon
 import com.wpinrui.harmoni.search.AppMatcher
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * Picks the app for one ring position.

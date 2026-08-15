@@ -11,9 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,10 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -51,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -75,17 +69,21 @@ import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.home.RingSlots
 import com.wpinrui.harmoni.home.iconPackage
 import com.wpinrui.harmoni.home.ringTargets
+import com.wpinrui.harmoni.ui.theme.Ground
+import com.wpinrui.harmoni.ui.theme.Meta
 import com.wpinrui.harmoni.ui.theme.Karla
 import com.wpinrui.harmoni.ui.theme.noRipple
 import kotlin.math.ceil
-import kotlin.math.hypot
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * The search view from Section 4, over the home surface.
  *
  * Opens on the first stroke, carrying whatever letter that stroke was, or on a double tap with
- * nothing typed at all, which makes it the all apps screen: the query is empty and every installed
- * app matches.
+ * nothing typed at all, which makes it the all apps screen: the query is empty and everything the
+ * launcher offers matches. Hidden apps never appear, and nor do the fixed ring's eight unless the
+ * toggle on the launcher app screen says otherwise.
  *
  * Everything after that is drawn in the input area below the grid. There is no keyboard.
  */
@@ -419,7 +417,7 @@ private fun BlurredWallpaper(radius: Dp) {
     }
 }
 
-private val Tint = Color(0xFF120E0C).copy(alpha = 0.72f)
+private val Tint = Ground.copy(alpha = 0.72f)
 private val IconShape = RoundedCornerShape(26)
 
 private val QueryStyle = TextStyle(
@@ -435,7 +433,7 @@ private val MetaStyle = TextStyle(
     fontWeight = FontWeight.Normal,
     fontSize = 13.sp,
     letterSpacing = 0.12.em,
-    color = Color(0xFFCFC6BD),
+    color = Meta,
 )
 
 private const val Columns = 4

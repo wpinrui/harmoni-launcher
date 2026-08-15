@@ -7,11 +7,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -23,6 +21,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalViewConfiguration
 import androidx.compose.ui.unit.Density
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.wpinrui.harmoni.apps.HiddenApps
 import com.wpinrui.harmoni.context.ContextualRing
 import com.wpinrui.harmoni.diagnostics.Diagnostics
@@ -33,6 +32,8 @@ import com.wpinrui.harmoni.shortcuts.GestureBindings
 import com.wpinrui.harmoni.shortcuts.ShortcutGesture
 import com.wpinrui.harmoni.system.NotificationShade
 import kotlinx.coroutines.delay
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * The surface the rest of the launcher is built on.
@@ -57,6 +58,13 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     var searchQuery by remember { mutableStateOf("") }
 
     val contextual = remember(context) { ContextualRing(context) }
+
+    // Four months of usage stats, too slow to read with a finger down. Coming back to the home
+    // surface is the moment before any press, so that is where it is refreshed.
+    LifecycleResumeEffect(contextual) {
+        contextual.refresh()
+        onPauseOrDispose {}
+    }
     val alphabet by context.harmoni.graffiti.collectAsState()
     val entries by context.harmoni.appIndex.entries.collectAsState()
     val overrides by RingSlots.overrides.collectAsState()

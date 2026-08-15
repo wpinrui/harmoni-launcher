@@ -12,10 +12,8 @@ import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -29,6 +27,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.net.toUri
 import com.wpinrui.harmoni.BuildConfig
+import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.HiddenApps
 import com.wpinrui.harmoni.apps.visible
 import com.wpinrui.harmoni.diagnostics.Diagnostics
@@ -44,14 +43,16 @@ import com.wpinrui.harmoni.ui.theme.Karla
 import com.wpinrui.harmoni.ui.theme.TurnedV
 import com.wpinrui.harmoni.ui.theme.TurnedVWeight
 import com.wpinrui.harmoni.ui.theme.noRipple
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * What the launcher is doing, per GDD Section 6.
  *
  * Four sections are editable: the ring's eight, what each swipe up runs, which apps are hidden,
- * and whether the ring's apps also appear in search. The rest reports, and the contextual rules,
- * diagnostics and build info are read-only by construction, since they live in source or are
- * counted rather than chosen.
+ * and whether the ring's apps also appear in search. The contextual rules and build info are
+ * read-only by construction, since they live in source. Diagnostics are reported and can be
+ * reset, which is the only thing that can be done to a count.
  */
 @Composable
 fun LauncherAppScreen() {
@@ -165,7 +166,7 @@ private fun LazyListScope.section(
 /** Both pickers, kept together so the screen itself is a list of sections and nothing else. */
 @Composable
 private fun LauncherDialogs(
-    entries: List<com.wpinrui.harmoni.apps.AppEntry>,
+    entries: List<AppEntry>,
     editingSlot: Int?,
     bindingGesture: ShortcutGesture?,
     bound: Set<ShortcutGesture>,

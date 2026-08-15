@@ -14,7 +14,6 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -27,6 +26,7 @@ import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.home.RingSlots
 import com.wpinrui.harmoni.ui.theme.Accent
 import com.wpinrui.harmoni.ui.theme.Ground
+import androidx.compose.runtime.getValue
 
 /**
  * Which apps Harmoni pretends are not installed.

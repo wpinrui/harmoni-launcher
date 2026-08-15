@@ -63,6 +63,17 @@ class GestureShapeTest {
     }
 
     @Test
+    fun `a vertical zigzag is not straight enough to be a swipe`() {
+        // Vertical and long enough, so it passes every guard but straightness, which is the one
+        // that separates a swipe from a letter.
+        val zigzag = line(Offset(100f, 400f), Offset(0f, 300f)) +
+            line(Offset(0f, 300f), Offset(200f, 200f)) +
+            line(Offset(200f, 200f), Offset(100f, 100f))
+
+        assertFalse(isStraightSwipe(zigzag, travel, downward = false))
+    }
+
+    @Test
     fun `fewer than two points is never a swipe`() {
         assertFalse(isStraightSwipe(emptyList(), travel, downward = false))
         assertFalse(isStraightSwipe(listOf(Offset(1f, 1f)), travel, downward = false))
@@ -85,10 +96,11 @@ class GestureShapeTest {
 
     @Test
     fun `a stroke that doubles back is not backspace`() {
-        val there = line(Offset(100f, 200f), Offset(400f, 200f))
-        val andBack = line(Offset(400f, 200f), Offset(120f, 200f))
+        val there = line(Offset(200f, 200f), Offset(500f, 200f))
+        val andBack = line(Offset(500f, 200f), Offset(100f, 200f))
 
-        // Net travel is a fraction of the span it covered, so it is a letter, not an erase.
+        // It does end left of where it started, so the direction guard passes. What rejects it
+        // is net travel of 100 against a span of 400, well under the share required.
         assertFalse(isBackspaceStroke(there + andBack, span))
     }
 

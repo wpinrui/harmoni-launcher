@@ -1,7 +1,6 @@
 package com.wpinrui.harmoni.system
 
 import android.content.ComponentName
-import android.content.Context
 import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
@@ -11,11 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
 import com.wpinrui.harmoni.home.HomeBindings
+import androidx.compose.runtime.getValue
 
 /** What the music element shows when something is playing. */
 data class NowPlaying(val title: String, val artist: String?) {

@@ -29,12 +29,18 @@ class ContextualRing(private val context: Context) {
 
     private val history = LaunchHistory(context)
 
+    private val scope = CoroutineScope(Dispatchers.IO)
+
     @Volatile
     private var lastUsed: Map<String, Instant> = emptyMap()
 
+    init {
+        refresh()
+    }
+
     /** Called when the home surface comes to the front, which is the moment before any press. */
     fun refresh() {
-        CoroutineScope(Dispatchers.IO).launch {
+        scope.launch {
             lastUsed = history.lastUsed(Instant.now())
             if (lastUsed.isEmpty()) {
                 Log.w(TAG, "No usage history; grant usage access or the ring is baselines only")
@@ -51,7 +57,8 @@ class ContextualRing(private val context: Context) {
             zone = ZoneId.systemDefault(),
             motion = MotionMonitor.state.value,
             usbDataConnected = context.harmoni.usb.dataConnected,
-            // Cheap: one query over the longest pull window, which is half an hour.
+            // Cheap: one query over the last two hours, comfortably past the longest pull
+            // window.
             sessions = history.recentSessions(now),
             lastUsed = lastUsed,
             notified = NotificationCounts.counts.value.keys,

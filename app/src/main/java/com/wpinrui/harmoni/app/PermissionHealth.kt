@@ -15,11 +15,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -35,6 +33,8 @@ import com.wpinrui.harmoni.system.HarmoniNotificationListener
 import com.wpinrui.harmoni.system.NotificationAccess
 import com.wpinrui.harmoni.system.hasNotificationAccess
 import com.wpinrui.harmoni.ui.theme.noRipple
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * What each permission buys, and whether it is live right now.

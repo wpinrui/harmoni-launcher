@@ -2,7 +2,8 @@ package com.wpinrui.harmoni.home
 
 import android.content.Context
 import androidx.core.content.edit
-import com.wpinrui.harmoni.settings.PreferenceStore
+import com.wpinrui.harmoni.app.SettingsRestart
+import com.wpinrui.harmoni.settings.preferences
 import com.wpinrui.harmoni.apps.AppEntry
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,9 +16,9 @@ import kotlinx.coroutines.flow.asStateFlow
  * slot that was never touched still follows the source, and resetting one is a delete rather than
  * a restore.
  */
-private const val FILE = "ring"
+object RingSlots {
 
-object RingSlots : PreferenceStore(FILE) {
+    private const val FILE = "ring"
 
     private const val SLOT = "slot_"
     private const val SHOW_IN_SEARCH = "show_in_search"
@@ -37,8 +38,8 @@ object RingSlots : PreferenceStore(FILE) {
      */
     val showInSearch: StateFlow<Boolean> = _showInSearch.asStateFlow()
 
-    override fun load(context: Context) {
-        val preferences = preferences(context)
+    fun load(context: Context) {
+        val preferences = context.preferences(FILE)
 
         _overrides.value = preferences.all
             .filterKeys { it.startsWith(SLOT) }
@@ -53,15 +54,15 @@ object RingSlots : PreferenceStore(FILE) {
     }
 
     fun bind(context: Context, index: Int, packageName: String) {
-        preferences(context).edit { putString("$SLOT$index", packageName) }
+        context.preferences(FILE).edit { putString("$SLOT$index", packageName) }
         _overrides.value = _overrides.value + (index to packageName)
-        settingChanged()
+        SettingsRestart.mark()
     }
 
     fun reset(context: Context, index: Int) {
-        preferences(context).edit { remove("$SLOT$index") }
+        context.preferences(FILE).edit { remove("$SLOT$index") }
         _overrides.value = _overrides.value - index
-        settingChanged()
+        SettingsRestart.mark()
     }
 
     /** Hiding an app it is bound to takes it off the ring, back to whatever the source says. */
@@ -70,9 +71,9 @@ object RingSlots : PreferenceStore(FILE) {
     }
 
     fun setShowInSearch(context: Context, show: Boolean) {
-        preferences(context).edit { putBoolean(SHOW_IN_SEARCH, show) }
+        context.preferences(FILE).edit { putBoolean(SHOW_IN_SEARCH, show) }
         _showInSearch.value = show
-        settingChanged()
+        SettingsRestart.mark()
     }
 }
 

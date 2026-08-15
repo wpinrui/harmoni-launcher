@@ -23,6 +23,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.wpinrui.harmoni.ui.theme.Accent
 import com.wpinrui.harmoni.ui.theme.Karla
+import com.wpinrui.harmoni.ui.theme.Meta
 import com.wpinrui.harmoni.ui.theme.noRipple
 
 /**
@@ -103,7 +104,7 @@ internal val HeaderStyle = TextStyle(
     fontWeight = FontWeight.Medium,
     fontSize = 11.sp,
     letterSpacing = 0.22.em,
-    color = Color(0xFFCFC6BD),
+    color = Meta,
 )
 
 internal val BodyStyle = TextStyle(

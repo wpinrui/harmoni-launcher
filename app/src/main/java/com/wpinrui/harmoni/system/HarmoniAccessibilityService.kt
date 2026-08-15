@@ -1,8 +1,6 @@
 package com.wpinrui.harmoni.system
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Context
-import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow

@@ -2,17 +2,14 @@ package com.wpinrui.harmoni.search
 
 import android.app.WallpaperManager
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Environment
-import android.provider.Settings
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.net.toUri
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.scale
 import kotlinx.coroutines.Dispatchers
@@ -20,6 +17,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
+import androidx.core.net.toUri
 
 /**
  * The wallpaper as a bitmap, for drawing a blurred copy of it inside the launcher's own window.

@@ -3,10 +3,6 @@ package com.wpinrui.harmoni.graffiti
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,21 +17,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -44,13 +35,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.wpinrui.harmoni.ui.theme.Ground
 import com.wpinrui.harmoni.ui.theme.Karla
 import com.wpinrui.harmoni.ui.theme.noRipple
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlin.math.hypot
-import kotlin.math.min
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * Records the Graffiti alphabet, one letter at a time.
@@ -366,7 +358,7 @@ private fun Footer(total: Int, path: String) {
 private fun isStroke(points: List<Offset>, minimumSpan: Float): Boolean =
     points.size >= MinimumPoints && strokeSpan(points) >= minimumSpan
 
-private val Background = Color(0xFF120E0C)
+private val Background = Ground
 private val Canvas0 = Color(0xFF1D1815)
 private val SlotEmpty = Color(0xFF171310)
 private val SlotFilled = Color(0xFF221C18)

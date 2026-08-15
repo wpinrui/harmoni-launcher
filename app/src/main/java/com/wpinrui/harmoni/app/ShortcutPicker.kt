@@ -6,11 +6,9 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
@@ -21,6 +19,8 @@ import com.wpinrui.harmoni.shortcuts.AppShortcut
 import com.wpinrui.harmoni.shortcuts.AppShortcuts
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * Picks one of the shortcuts published on the device, the ones other launchers show on a long

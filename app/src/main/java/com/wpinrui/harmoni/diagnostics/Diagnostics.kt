@@ -2,7 +2,7 @@ package com.wpinrui.harmoni.diagnostics
 
 import android.content.Context
 import androidx.core.content.edit
-import com.wpinrui.harmoni.settings.PreferenceStore
+import com.wpinrui.harmoni.settings.preferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -24,7 +24,9 @@ data class DiagnosticCounts(
 }
 
 /** Counts kept across restarts, since the launcher process rarely dies. */
-object Diagnostics : PreferenceStore(FILE) {
+object Diagnostics {
+
+    private const val FILE = "diagnostics"
 
     private const val MISREAD_PREFIX = "misread_"
     private const val RING_DISMISSALS = "ring_dismissals"
@@ -32,11 +34,8 @@ object Diagnostics : PreferenceStore(FILE) {
     private val _counts = MutableStateFlow(DiagnosticCounts())
     val counts: StateFlow<DiagnosticCounts> = _counts.asStateFlow()
 
-    /** A count changes nothing anybody is looking at, so it does not earn a restart. */
-    override fun settingChanged() = Unit
-
-    override fun load(context: Context) {
-        val preferences = preferences(context)
+    fun load(context: Context) {
+        val preferences = context.preferences(FILE)
 
         _counts.value = DiagnosticCounts(
             misreads = preferences.all
@@ -55,21 +54,20 @@ object Diagnostics : PreferenceStore(FILE) {
     fun recordMisread(context: Context, letter: Char) {
         val counts = _counts.value
         val next = (counts.misreads[letter] ?: 0) + 1
-        preferences(context).edit { putInt("$MISREAD_PREFIX$letter", next) }
+        context.preferences(FILE).edit { putInt("$MISREAD_PREFIX$letter", next) }
         _counts.value = counts.copy(misreads = counts.misreads + (letter to next))
     }
 
     fun recordRingDismissal(context: Context) {
         val next = _counts.value.ringDismissals + 1
-        preferences(context).edit { putInt(RING_DISMISSALS, next) }
+        context.preferences(FILE).edit { putInt(RING_DISMISSALS, next) }
         _counts.value = _counts.value.copy(ringDismissals = next)
     }
 
     /** Offered on the diagnostics view, since counts are only worth reading against a period. */
     fun clear(context: Context) {
-        preferences(context).edit { clear() }
+        context.preferences(FILE).edit { clear() }
         _counts.value = DiagnosticCounts()
     }
 }
 
-private const val FILE = "diagnostics"

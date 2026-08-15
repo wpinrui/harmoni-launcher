@@ -2,7 +2,8 @@ package com.wpinrui.harmoni.shortcuts
 
 import android.content.Context
 import androidx.core.content.edit
-import com.wpinrui.harmoni.settings.PreferenceStore
+import com.wpinrui.harmoni.app.SettingsRestart
+import com.wpinrui.harmoni.settings.preferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -28,9 +29,9 @@ data class BoundShortcut(
 )
 
 /** Shortcuts bound to gestures, per Harmoni's own settings rather than the GDD's fixed set. */
-private const val FILE = "gesture_bindings"
+object GestureBindings {
 
-object GestureBindings : PreferenceStore(FILE) {
+    private const val FILE = "gesture_bindings"
 
     private val _bindings = MutableStateFlow<Map<ShortcutGesture, BoundShortcut>>(emptyMap())
     val bindings: StateFlow<Map<ShortcutGesture, BoundShortcut>> = _bindings.asStateFlow()
@@ -39,8 +40,8 @@ object GestureBindings : PreferenceStore(FILE) {
     // can contain anything, including whatever separator seemed safe.
     private fun key(gesture: ShortcutGesture, field: String) = "${gesture.name}_$field"
 
-    override fun load(context: Context) {
-        val preferences = preferences(context)
+    fun load(context: Context) {
+        val preferences = context.preferences(FILE)
 
         _bindings.value = ShortcutGesture.entries.mapNotNull { gesture ->
             val packageName = preferences.getString(key(gesture, "package"), null)
@@ -57,7 +58,7 @@ object GestureBindings : PreferenceStore(FILE) {
     }
 
     fun bind(context: Context, gesture: ShortcutGesture, shortcut: AppShortcut) {
-        preferences(context).edit {
+        context.preferences(FILE).edit {
             putString(key(gesture, "package"), shortcut.packageName)
             putString(key(gesture, "id"), shortcut.id)
             putString(key(gesture, "label"), shortcut.label)
@@ -72,15 +73,15 @@ object GestureBindings : PreferenceStore(FILE) {
                 appLabel = shortcut.appLabel,
             )
             )
-        settingChanged()
+        SettingsRestart.mark()
     }
 
     fun clear(context: Context, gesture: ShortcutGesture) {
-        preferences(context).edit {
+        context.preferences(FILE).edit {
             listOf("package", "id", "label", "app").forEach { remove(key(gesture, it)) }
         }
         _bindings.value = _bindings.value - gesture
-        settingChanged()
+        SettingsRestart.mark()
     }
 
     fun start(context: Context, gesture: ShortcutGesture) {

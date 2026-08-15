@@ -70,8 +70,12 @@ object ContextualScoring {
 
     /** Every candidate with a non-zero score, for the ring and for explaining it. */
     fun score(snapshot: ContextSnapshot): List<ScoredApp> {
+        // Filtered against what the launcher can open, not just the filler below: a sticky
+        // notification promotes any package that posts one, and a screen recording or a system
+        // download would otherwise take a slot and draw an empty circle.
         val candidates = (ContextApps.all + snapshot.sticky + snapshot.notified)
             .toSet()
+            .filter { it in snapshot.launchable }
             .filterNot { it in snapshot.excluded }
 
         return candidates.mapNotNull { packageName ->
@@ -105,8 +109,12 @@ object ContextualScoring {
         ContextualRules.pulls
             .filter { it.target == packageName }
             .mapNotNull { pull ->
+                // Measured from when the visit ended, not when it began. A long visit is one
+                // session whose start can be well outside the window while the user has only
+                // just put the app down.
                 val launched = snapshot.sessions.any {
-                    it.packageName == pull.source && it.start.isWithin(pull.window, snapshot.now)
+                    it.packageName == pull.source &&
+                        it.start.plus(it.duration).isWithin(pull.window, snapshot.now)
                 }
                 if (launched) "pull from ${pull.source.short()}" to pull.weight else null
             }

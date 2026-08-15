@@ -11,6 +11,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import com.wpinrui.harmoni.ui.theme.Accent
 import kotlin.math.min
 
 /**
@@ -57,4 +58,4 @@ private fun fitTo(points: List<Offset>, size: Size): List<Offset> {
     return points.map { Offset(left + (it.x - minX) * scale, top + (it.y - minY) * scale) }
 }
 
-val StartDot = Color(0xFFE8B979)
+val StartDot = Accent

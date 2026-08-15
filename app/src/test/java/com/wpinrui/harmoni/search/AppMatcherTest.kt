@@ -70,8 +70,8 @@ class AppMatcherTest {
 
     @Test
     fun `edit distance only runs when nothing matches in order`() {
-        // "clok" is not a subsequence of Clock, so the fallback tier finds it.
-        assertEquals(listOf("Clock"), AppMatcher.match(entries("Clock"), "clok").labels())
+        // "clcok" is not a subsequence of Clock in any order, so only edit distance can find it.
+        assertEquals(listOf("Clock"), AppMatcher.match(entries("Clock"), "clcok").labels())
 
         // "cl" is a subsequence of both, so neither edit-distance neighbour may be added.
         val both = AppMatcher.match(entries("Clock", "Calculator"), "cl")

@@ -48,7 +48,7 @@ you change the parts that are yours:
   and a ring position holding one is left blank rather than closing the gap.
 - **Graffiti alphabet.** The stroke chart, and a way to redraw any letter.
 - **Permission health.** What is live now, each row tapping through to the Settings page behind it.
-- **Contextual rules, diagnostics, build info.** Read-only.
+- **Contextual rules and build info.** Read-only. Diagnostics too, apart from resetting them.
 
 Settings save on the tap and take effect the next time you come home, which is when Harmoni
 restarts to pick them up.
