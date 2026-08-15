@@ -7,6 +7,7 @@ import com.wpinrui.harmoni.apps.IconResolver
 import com.wpinrui.harmoni.apps.SystemIconResolver
 import com.wpinrui.harmoni.context.MotionMonitor
 import com.wpinrui.harmoni.context.UsbConnection
+import com.wpinrui.harmoni.diagnostics.Diagnostics
 import com.wpinrui.harmoni.graffiti.GraffitiAlphabet
 import com.wpinrui.harmoni.search.WallpaperCache
 import kotlinx.coroutines.CoroutineScope
@@ -62,6 +63,7 @@ class HarmoniApplication : Application() {
         iconResolver = SystemIconResolver(this)
         usb = UsbConnection(this).apply { start() }
         MotionMonitor.start(this)
+        Diagnostics.load(this)
 
         CoroutineScope(Dispatchers.Default).launch {
             // Decoded up front so the search view's backdrop is ready to fade in with everything

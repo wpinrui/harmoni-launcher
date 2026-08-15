@@ -241,9 +241,11 @@ private fun SampleSlots(samples: List<GraffitiSample>, onDelete: (Int) -> Unit) 
                     .noRipple(enabled = sample != null) { onDelete(index) },
             ) {
                 if (sample != null) {
-                    Canvas(modifier = Modifier.fillMaxSize().padding(8.dp)) {
-                        drawStroke(fitTo(sample.points, size), StrokeWidthThin.toPx())
-                    }
+                    GraffitiStrokeArt(
+                        points = sample.points,
+                        modifier = Modifier.fillMaxSize().padding(8.dp),
+                        width = StrokeWidthThin,
+                    )
                 }
             }
         }
@@ -320,8 +322,15 @@ private fun DrawArea(
         contentAlignment = Alignment.Center,
     ) {
         if (live.isNotEmpty()) {
+            // Drawn where the finger went rather than fitted to the box, since this is the stroke
+            // being made rather than a record of one.
             Canvas(modifier = Modifier.fillMaxSize()) {
-                drawStroke(live, StrokeWidthThick.toPx())
+                val path = Path().apply {
+                    moveTo(live.first().x, live.first().y)
+                    live.drop(1).forEach { lineTo(it.x, it.y) }
+                }
+                drawPath(path, Color.White.copy(alpha = 0.92f), style = Stroke(width = StrokeWidthThick.toPx()))
+                drawCircle(StartDot, radius = StrokeWidthThick.toPx() * 1.6f, center = live.first())
             }
         }
 
@@ -369,32 +378,6 @@ private fun isStroke(points: List<Offset>, minimumSpan: Float): Boolean {
     return hypot(width, height) >= minimumSpan
 }
 
-/** Scales a stroke into [size], keeping its aspect ratio, which is what tells b from a wide b. */
-private fun fitTo(points: List<Offset>, size: Size): List<Offset> {
-    val minX = points.minOf { it.x }
-    val minY = points.minOf { it.y }
-    val width = (points.maxOf { it.x } - minX).coerceAtLeast(1f)
-    val height = (points.maxOf { it.y } - minY).coerceAtLeast(1f)
-
-    val scale = min(size.width / width, size.height / height)
-    val left = (size.width - width * scale) / 2f
-    val top = (size.height - height * scale) / 2f
-
-    return points.map { Offset(left + (it.x - minX) * scale, top + (it.y - minY) * scale) }
-}
-
-private fun DrawScope.drawStroke(points: List<Offset>, width: Float) {
-    if (points.isEmpty()) return
-
-    val path = Path().apply {
-        moveTo(points.first().x, points.first().y)
-        points.drop(1).forEach { lineTo(it.x, it.y) }
-    }
-
-    drawPath(path, Color.White.copy(alpha = 0.92f), style = Stroke(width = width))
-    drawCircle(StartDot, radius = width * 1.6f, center = points.first())
-}
-
 @Composable
 private fun Modifier.noRipple(enabled: Boolean, onClick: () -> Unit): Modifier {
     if (!enabled) return this
@@ -406,7 +389,6 @@ private val Background = Color(0xFF120E0C)
 private val Canvas0 = Color(0xFF1D1815)
 private val SlotEmpty = Color(0xFF171310)
 private val SlotFilled = Color(0xFF221C18)
-private val StartDot = Color(0xFFE8B979)
 
 private val StrokeWidthThin = 2.dp
 private val StrokeWidthThick = 5.dp

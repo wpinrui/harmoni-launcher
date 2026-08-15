@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import com.wpinrui.harmoni.context.ContextualRing
+import com.wpinrui.harmoni.diagnostics.Diagnostics
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -75,6 +76,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                             ringCentre = gesture.position
                         } else {
                             rejectCount++
+                            Diagnostics.recordEdgeReject(context)
                             Log.d(TAG, "Tap rejected, too near an edge: ${gesture.position}")
                         }
 
@@ -92,6 +94,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                             ringCentre = gesture.position
                         } else {
                             rejectCount++
+                            Diagnostics.recordEdgeReject(context)
                             Log.d(TAG, "Long press rejected, too near an edge: ${gesture.position}")
                         }
 
@@ -124,6 +127,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                 },
                 onDismiss = {
                     Log.d(TAG, "Ring dismissed without a pick")
+                    Diagnostics.recordRingDismissal(context)
                     ringCentre = null
                 },
                 interactive = ringInteractive,

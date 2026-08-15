@@ -23,16 +23,20 @@ swipe to erase.
 Badge counts and now-playing text need notification access, granted by hand under Settings,
 Notifications, Device and app notifications.
 
+Opening Harmoni from the app list gives the launcher app screen: the ring bindings, the alphabet
+chart, the contextual rules as written, permission health, build info, diagnostics and the full
+app list. It is read-only.
+
 ## Graffiti alphabet
 
 The letter shapes are not printed letters. Each one is a single stroke, captured by hand and
 shipped in `app/src/main/assets/graffiti.json`, and matching is nearest-template rather than an
 average of the samples.
 
-To draw your own, open **Graffiti Setup** from the app list. It steps through the alphabet five
-draws per letter and writes to the app's external files directory. Any letter recaptured there
-replaces the bundled samples for that letter alone, so a single shape can be fixed without
-redrawing the rest. To make a capture the shipped default:
+To draw your own, open Harmoni from the app list and tap **Redraw the alphabet**. It steps through
+the alphabet five draws per letter and writes to the app's external files directory. Any letter
+recaptured there replaces the bundled samples for that letter alone, so a single shape can be
+fixed without redrawing the rest. To make a capture the shipped default:
 
 ```
 adb pull /sdcard/Android/data/com.wpinrui.harmoni/files/graffiti.json app/src/main/assets/
@@ -78,8 +82,8 @@ Badge icons from [Flaticon](https://www.flaticon.com), used under the Flaticon f
 Type is [Karla](https://github.com/googlefonts/karla) by the Karla Project Authors, under the SIL
 Open Font License. Full text in [licenses/Karla-OFL.txt](licenses/Karla-OFL.txt).
 
-These credits also have to appear on the launcher app screen, tracked in
-[#6](https://github.com/wpinrui/harmoni-launcher/issues/6).
+These credits also appear on the launcher app screen, which is where they have to be to satisfy
+the licences of the assets shipped in the APK. Keep the two in step.
 
 ## Checks
 

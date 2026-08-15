@@ -60,6 +60,7 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.AppEntryIcon
+import com.wpinrui.harmoni.diagnostics.Diagnostics
 import com.wpinrui.harmoni.graffiti.isBackspaceStroke
 import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.ui.theme.Karla
@@ -81,6 +82,7 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
     val entries by context.harmoni.appIndex.entries.collectAsState()
     val alphabet by context.harmoni.graffiti.collectAsState()
     var query by remember { mutableStateOf(initialQuery) }
+    var lastLetter by remember { mutableStateOf<Char?>(null) }
 
     val results = remember(entries, query) { AppMatcher.match(entries, query) }
     val pageCount = maxOf(1, ceil(results.size / PerPage.toFloat()).toInt())
@@ -131,8 +133,14 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
             PageDots(pageCount = pageCount, current = pager.currentPage)
 
             GraffitiInput(
-                onLetter = { query += it },
-                onBackspace = { query = query.dropLast(1) },
+                onLetter = { query += it; lastLetter = it },
+                onBackspace = {
+                    // Erasing the letter just recognised is the only evidence there is that it was
+                    // recognised wrongly. Erasing anything older is ordinary editing.
+                    lastLetter?.let { Diagnostics.recordMisread(context, it) }
+                    lastLetter = null
+                    query = query.dropLast(1)
+                },
                 onTap = onClose,
                 recognise = { alphabet.recognise(it)?.letter },
             )
