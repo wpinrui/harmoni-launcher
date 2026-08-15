@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
@@ -19,6 +20,7 @@ import com.wpinrui.harmoni.context.ContextualRing
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalViewConfiguration
+import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.search.SearchSurface
 
 /**
@@ -37,9 +39,11 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     var slots by remember { mutableStateOf(RingBindings.slots) }
     var ringInteractive by remember { mutableStateOf(true) }
     var searchOpen by remember { mutableStateOf(false) }
+    var searchQuery by remember { mutableStateOf("") }
     val doubleTapWindow = LocalViewConfiguration.current.doubleTapTimeoutMillis
     val context = LocalContext.current
     val contextual = remember(context) { ContextualRing(context) }
+    val alphabet by context.harmoni.graffiti.collectAsState()
 
     // Coming home while the ring or the app list is up means "get me back to the wallpaper".
     LaunchedEffect(Unit) {
@@ -76,6 +80,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
 
                     is HomeGesture.DoubleTap -> {
                         ringCentre = null
+                        searchQuery = ""
                         searchOpen = true
                     }
 
@@ -90,8 +95,19 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                             Log.d(TAG, "Long press rejected, too near an edge: ${gesture.position}")
                         }
 
-                    is HomeGesture.Stroke ->
-                        Log.d(TAG, "Stroke of ${gesture.points.size} points")
+                    // Section 4 opens the search view on the first stroke, carrying that letter.
+                    // A stroke that matches nothing is left alone: opening an empty search would
+                    // put the whole surface behind a scrim for what was probably a stray swipe.
+                    is HomeGesture.Stroke -> {
+                        val match = alphabet.recognise(gesture.points)
+                        if (match == null) {
+                            Log.d(TAG, "Stroke of ${gesture.points.size} points matched no letter")
+                        } else {
+                            ringCentre = null
+                            searchQuery = match.letter.toString()
+                            searchOpen = true
+                        }
+                    }
                 }
             },
     ) {
@@ -116,6 +132,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
 
         if (searchOpen) {
             SearchSurface(
+                initialQuery = searchQuery,
                 onLaunch = { entry ->
                     searchOpen = false
                     context.launchApp(entry.packageName)
