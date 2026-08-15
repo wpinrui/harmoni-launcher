@@ -15,8 +15,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
+import com.wpinrui.harmoni.apps.HiddenApps
 import com.wpinrui.harmoni.context.ContextualRing
+import com.wpinrui.harmoni.diagnostics.Diagnostics
 import androidx.compose.ui.platform.LocalDensity
 import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalViewConfiguration
@@ -36,7 +40,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     var surface by remember { mutableStateOf(Size.Zero) }
     var rejectCount by remember { mutableIntStateOf(0) }
     var ringCentre by remember { mutableStateOf<Offset?>(null) }
-    var slots by remember { mutableStateOf(RingBindings.slots) }
+    var slots by remember { mutableStateOf(emptyList<RingTarget?>()) }
     var ringInteractive by remember { mutableStateOf(true) }
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -44,6 +48,12 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val contextual = remember(context) { ContextualRing(context) }
     val alphabet by context.harmoni.graffiti.collectAsState()
+    val haptics = LocalHapticFeedback.current
+
+    val entries by context.harmoni.appIndex.entries.collectAsState()
+    val overrides by RingSlots.overrides.collectAsState()
+    val hidden by HiddenApps.packages.collectAsState()
+    val fixed = remember(overrides, entries, hidden) { ringTargets(overrides, entries, hidden) }
 
     // Coming home while the ring or the app list is up means "get me back to the wallpaper".
     LaunchedEffect(Unit) {
@@ -68,13 +78,15 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                 when (gesture) {
                     is HomeGesture.Tap ->
                         if (RingPlacement.fits(gesture.position, surface, density)) {
-                            slots = RingBindings.slots
+                            slots = fixed
                             // Deaf until the moment a second tap could no longer arrive, so the
                             // surface keeps both halves of a double tap.
                             ringInteractive = false
                             ringCentre = gesture.position
+                            haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
                         } else {
                             rejectCount++
+                            Diagnostics.recordEdgeReject(context)
                             Log.d(TAG, "Tap rejected, too near an edge: ${gesture.position}")
                         }
 
@@ -90,8 +102,12 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                             // A long press cannot be half a double tap, so this one is live at once.
                             ringInteractive = true
                             ringCentre = gesture.position
+                            // Heavier than the tap ring's: the finger is still down and this is
+                            // the only signal that waiting has paid off.
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         } else {
                             rejectCount++
+                            Diagnostics.recordEdgeReject(context)
                             Log.d(TAG, "Long press rejected, too near an edge: ${gesture.position}")
                         }
 
@@ -124,6 +140,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                 },
                 onDismiss = {
                     Log.d(TAG, "Ring dismissed without a pick")
+                    Diagnostics.recordRingDismissal(context)
                     ringCentre = null
                 },
                 interactive = ringInteractive,

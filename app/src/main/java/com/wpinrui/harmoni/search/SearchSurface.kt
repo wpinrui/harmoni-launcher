@@ -60,8 +60,14 @@ import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.AppEntryIcon
+import com.wpinrui.harmoni.apps.HiddenApps
+import com.wpinrui.harmoni.apps.visible
+import com.wpinrui.harmoni.diagnostics.Diagnostics
 import com.wpinrui.harmoni.graffiti.isBackspaceStroke
 import com.wpinrui.harmoni.harmoni
+import com.wpinrui.harmoni.home.RingSlots
+import com.wpinrui.harmoni.home.iconPackage
+import com.wpinrui.harmoni.home.ringTargets
 import com.wpinrui.harmoni.ui.theme.Karla
 import kotlin.math.ceil
 import kotlin.math.hypot
@@ -81,8 +87,24 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
     val entries by context.harmoni.appIndex.entries.collectAsState()
     val alphabet by context.harmoni.graffiti.collectAsState()
     var query by remember { mutableStateOf(initialQuery) }
+    var lastLetter by remember { mutableStateOf<Char?>(null) }
 
-    val results = remember(entries, query) { AppMatcher.match(entries, query) }
+    // The ring's eight are one tap away already, so by default they do not also take places in a
+    // grid of eight. The toggle lives on the launcher app screen for when that is not wanted.
+    val overrides by RingSlots.overrides.collectAsState()
+    val showRing by RingSlots.showInSearch.collectAsState()
+    val hidden by HiddenApps.packages.collectAsState()
+    val pool = remember(entries, overrides, showRing, hidden) {
+        val visible = entries.visible(hidden)
+        if (showRing) {
+            visible
+        } else {
+            val onRing = ringTargets(overrides, visible, hidden).mapNotNull { it?.iconPackage }.toSet()
+            visible.filterNot { it.packageName in onRing }
+        }
+    }
+
+    val results = remember(pool, query) { AppMatcher.match(pool, query) }
     val pageCount = maxOf(1, ceil(results.size / PerPage.toFloat()).toInt())
     val pager = rememberPagerState(pageCount = { pageCount })
 
@@ -131,8 +153,14 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
             PageDots(pageCount = pageCount, current = pager.currentPage)
 
             GraffitiInput(
-                onLetter = { query += it },
-                onBackspace = { query = query.dropLast(1) },
+                onLetter = { query += it; lastLetter = it },
+                onBackspace = {
+                    // Erasing the letter just recognised is the only evidence there is that it was
+                    // recognised wrongly. Erasing anything older is ordinary editing.
+                    lastLetter?.let { Diagnostics.recordMisread(context, it) }
+                    lastLetter = null
+                    query = query.dropLast(1)
+                },
                 onTap = onClose,
                 recognise = { alphabet.recognise(it)?.letter },
             )

@@ -3,11 +3,14 @@ package com.wpinrui.harmoni
 import android.app.Application
 import android.content.Context
 import com.wpinrui.harmoni.apps.AppIndex
+import com.wpinrui.harmoni.apps.HiddenApps
 import com.wpinrui.harmoni.apps.IconResolver
 import com.wpinrui.harmoni.apps.SystemIconResolver
 import com.wpinrui.harmoni.context.MotionMonitor
 import com.wpinrui.harmoni.context.UsbConnection
+import com.wpinrui.harmoni.diagnostics.Diagnostics
 import com.wpinrui.harmoni.graffiti.GraffitiAlphabet
+import com.wpinrui.harmoni.home.RingSlots
 import com.wpinrui.harmoni.search.WallpaperCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -62,6 +65,9 @@ class HarmoniApplication : Application() {
         iconResolver = SystemIconResolver(this)
         usb = UsbConnection(this).apply { start() }
         MotionMonitor.start(this)
+        Diagnostics.load(this)
+        RingSlots.load(this)
+        HiddenApps.load(this)
 
         CoroutineScope(Dispatchers.Default).launch {
             // Decoded up front so the search view's backdrop is ready to fade in with everything

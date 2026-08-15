@@ -2,4 +2,5 @@
 <resources>
     <string name="app_name">Harmoni</string>
     <string name="graffiti_capture">Graffiti Setup</string>
+    <string name="hidden_apps">Hidden Apps</string>
 </resources>

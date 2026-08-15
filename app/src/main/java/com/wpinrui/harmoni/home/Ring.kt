@@ -55,7 +55,7 @@ import kotlin.math.sin
 @Composable
 fun Ring(
     centre: Offset,
-    slots: List<RingTarget>,
+    slots: List<RingTarget?>,
     onPick: (RingTarget) -> Unit,
     onDismiss: () -> Unit,
     interactive: Boolean = true,
@@ -72,6 +72,10 @@ fun Ring(
         CentreButton(centre = centre, appeared = appeared, interactive = interactive, onDismiss = onDismiss)
 
         slots.forEachIndexed { index, target ->
+            // A blank position still takes its index, so hiding one app does not shuffle the rest
+            // round the ring.
+            if (target == null) return@forEachIndexed
+
             val progress by animateFloatAsState(
                 targetValue = if (appeared) 1f else 0f,
                 animationSpec = tween(

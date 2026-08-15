@@ -69,20 +69,33 @@
         </activity>
 
         <!--
-            The alphabet capture tool. LAUNCHER rather than a route off the home surface, so it
-            shows up in Harmoni's own all apps grid and is reached by typing its name. Nothing
-            about it belongs on a gesture.
+            Harmoni opened as an app. This carries the launcher filter rather than HomeActivity,
+            which would otherwise offer a way of navigating to the screen you are already on.
         -->
         <activity
-            android:name=".graffiti.GraffitiCaptureActivity"
+            android:name=".app.LauncherAppActivity"
             android:exported="true"
-            android:label="@string/graffiti_capture"
+            android:label="@string/app_name"
             android:theme="@style/Theme.Harmoni">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
+        <!-- The alphabet capture tool, reached from the launcher app screen. -->
+        <activity
+            android:name=".graffiti.GraffitiCaptureActivity"
+            android:exported="false"
+            android:label="@string/graffiti_capture"
+            android:theme="@style/Theme.Harmoni" />
+
+        <!-- The hidden apps list, reached from the launcher app screen. -->
+        <activity
+            android:name=".app.HiddenAppsActivity"
+            android:exported="false"
+            android:label="@string/hidden_apps"
+            android:theme="@style/Theme.Harmoni" />
 
         <!--
             Bound by the system once notification access is granted by hand in Settings. It feeds
