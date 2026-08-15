@@ -7,6 +7,7 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -104,7 +105,7 @@ private suspend fun AwaitPointerEventScope.awaitHomeGesture(
     val settled = withTimeoutOrNull(longPressTimeout) {
         while (true) {
             val change = currentEvent(down.id) ?: break
-            path += change.position
+            path += change.trail()
             if (!change.pressed) {
                 released = true
                 break
@@ -129,7 +130,7 @@ private suspend fun AwaitPointerEventScope.awaitHomeGesture(
         else -> {
             while (!released) {
                 val change = currentEvent(down.id) ?: break
-                path += change.position
+                path += change.trail()
                 if (!change.pressed) released = true
             }
             emit(HomeGesture.Stroke(path.toList()))
@@ -139,6 +140,16 @@ private suspend fun AwaitPointerEventScope.awaitHomeGesture(
 
 private suspend fun AwaitPointerEventScope.currentEvent(id: PointerId) =
     awaitPointerEvent().changes.firstOrNull { it.id == id }
+
+/**
+ * Every position this change carries, not just the latest.
+ *
+ * The digitiser samples faster than the display refreshes, and the points in between are what a
+ * curve is made of. One point per frame is enough to tell a stroke from a tap, but the recogniser
+ * is comparing shapes against templates captured with the whole trail.
+ */
+private fun PointerInputChange.trail(): List<Offset> =
+    historical.map { it.position } + position
 
 private suspend fun AwaitPointerEventScope.awaitRelease(id: PointerId) {
     while (true) {

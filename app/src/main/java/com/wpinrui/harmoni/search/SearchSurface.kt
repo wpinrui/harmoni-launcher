@@ -1,15 +1,20 @@
 package com.wpinrui.harmoni.search
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
-import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -22,8 +27,7 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -38,47 +42,45 @@ import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.focus.FocusRequester
-import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.AppEntryIcon
+import com.wpinrui.harmoni.graffiti.isBackspaceStroke
 import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.ui.theme.Karla
 import kotlin.math.ceil
+import kotlin.math.hypot
 
 /**
  * The search view from Section 4, over the home surface.
  *
- * A double tap opens it with nothing typed, which makes it the all apps screen: the query is
- * simply empty and every installed app matches. Typing narrows it.
+ * Opens on the first stroke, carrying whatever letter that stroke was, or on a double tap with
+ * nothing typed at all, which makes it the all apps screen: the query is empty and every installed
+ * app matches.
  *
- * The soft keyboard stands in for Graffiti until the alphabet exists. It is the only part of this
- * screen the design does not call for, and it comes out again when strokes go in.
- *
- * It lives in its own window rather than in the launcher's. That is what makes the backdrop blur
- * possible: the system can only blur what is *behind* a window, and the launcher's own window is
- * where the wallpaper and the clock block are drawn, so asking it to blur itself does nothing.
+ * Everything after that is drawn in the input area below the grid. There is no keyboard.
  */
 @Composable
-fun SearchSurface(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
+fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
     val entries by context.harmoni.appIndex.entries.collectAsState()
-    var query by remember { mutableStateOf("") }
+    val alphabet by context.harmoni.graffiti.collectAsState()
+    var query by remember { mutableStateOf(initialQuery) }
 
     val results = remember(entries, query) { AppMatcher.match(entries, query) }
     val pageCount = maxOf(1, ceil(results.size / PerPage.toFloat()).toInt())
@@ -103,10 +105,7 @@ fun SearchSurface(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
         modifier = Modifier
             .fillMaxSize()
             .alpha(entrance)
-            // Tint over blur, as the design has it: the blur softens the wallpaper, the tint
-            // darkens it enough for white text to sit on.
-            // Anywhere that is not the grid or the query closes the view. The lower half is
-            // where Graffiti will live, so this is a stand-in for a stroke area, not a design.
+            // Anywhere that is not the grid, the query or the input area closes the view.
             .noRipple(onClose),
     ) {
         // Blur under tint, both fading with the entrance, as the design's backdrop filter does.
@@ -115,7 +114,7 @@ fun SearchSurface(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
         Box(modifier = Modifier.fillMaxSize().background(Tint))
 
         Column(modifier = Modifier.fillMaxSize()) {
-            QueryField(query = query, onQueryChange = { query = it })
+            QueryLine(query = query)
 
             ResultSummary(count = results.size, hasQuery = query.isNotEmpty())
 
@@ -131,47 +130,40 @@ fun SearchSurface(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
 
             PageDots(pageCount = pageCount, current = pager.currentPage)
 
-            GraffitiSpace()
+            GraffitiInput(
+                onLetter = { query += it },
+                onBackspace = { query = query.dropLast(1) },
+                onTap = onClose,
+                recognise = { alphabet.recognise(it)?.letter },
+            )
         }
     }
 }
 
+/**
+ * The query, with a caret where the next letter lands.
+ *
+ * Plain text rather than a field: there is nothing to focus and no keyboard to raise, and a field
+ * would offer both.
+ */
 @Composable
-private fun QueryField(query: String, onQueryChange: (String) -> Unit) {
-    val focus = remember { FocusRequester() }
-    val keyboard = LocalSoftwareKeyboardController.current
-
-    LaunchedEffect(Unit) {
-        focus.requestFocus()
-        keyboard?.show()
-    }
-
-    Box(
+private fun QueryLine(query: String) {
+    Row(
         modifier = Modifier
             .padding(start = 30.dp, end = 30.dp, top = 72.dp)
             .heightIn(min = 46.dp),
-        contentAlignment = Alignment.CenterStart,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        BasicTextField(
-            value = query,
-            onValueChange = { onQueryChange(it.lowercase()) },
+        Text(text = query, style = QueryStyle)
+
+        // Steady rather than blinking: it marks where letters appear, and the search view is
+        // already carrying a fade and a stroke trail.
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .focusRequester(focus),
-            singleLine = true,
-            textStyle = TextStyle(
-                fontFamily = Karla,
-                fontWeight = FontWeight.ExtraLight,
-                fontSize = 38.sp,
-                letterSpacing = 0.04.em,
-                color = Color.White,
-            ),
-            keyboardOptions = KeyboardOptions(
-                capitalization = KeyboardCapitalization.None,
-                autoCorrectEnabled = false,
-                imeAction = ImeAction.Search,
-            ),
-            cursorBrush = SolidColor(Color.White),
+                .padding(start = 4.dp)
+                .width(2.dp)
+                .height(38.dp)
+                .background(Color.White.copy(alpha = 0.55f)),
         )
     }
 }
@@ -265,14 +257,78 @@ private fun PageDots(pageCount: Int, current: Int) {
     }
 }
 
-/** Held open for Section 4's strokes. Empty for now, and labelled so it reads as reserved. */
+/**
+ * Where letters are drawn, which Section 4 confines to the space below the grid.
+ *
+ * The stroke stays on screen and fades once the finger lifts, so a letter that was misread can be
+ * seen for what it actually looked like rather than guessed at.
+ *
+ * A touch that goes nowhere is a tap, not a letter, and closes the view like anywhere else outside
+ * the grid. Between that and a real letter is a band where nothing happens at all, so a letter
+ * drawn too small is ignored rather than dismissing everything.
+ */
 @Composable
-private fun androidx.compose.foundation.layout.ColumnScope.GraffitiSpace() {
+private fun ColumnScope.GraffitiInput(
+    onLetter: (Char) -> Unit,
+    onBackspace: () -> Unit,
+    onTap: () -> Unit,
+    recognise: (List<Offset>) -> Char?,
+) {
+    val density = LocalDensity.current
+    val tapSpan = with(density) { TapSpan.toPx() }
+    val letterSpan = with(density) { LetterSpan.toPx() }
+    val backspaceSpan = with(density) { BackspaceSpan.toPx() }
+
+    var live by remember { mutableStateOf<List<Offset>>(emptyList()) }
+    var drawing by remember { mutableStateOf(false) }
+    val trail = remember { Animatable(0f) }
+
+    LaunchedEffect(drawing) {
+        if (drawing) {
+            trail.snapTo(1f)
+        } else if (live.isNotEmpty()) {
+            trail.animateTo(0f, tween(TrailFadeMillis))
+            live = emptyList()
+        }
+    }
+
     Box(
         modifier = Modifier
             .weight(1f)
             .fillMaxWidth()
-            .padding(top = 14.dp),
+            .padding(top = 14.dp)
+            .pointerInput(Unit) {
+                awaitEachGesture {
+                    val down = awaitFirstDown()
+                    down.consume()
+                    drawing = true
+
+                    val points = mutableListOf(down.position)
+                    live = points.toList()
+
+                    while (true) {
+                        val event = awaitPointerEvent()
+                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
+                        // Historical points arrive between frames, so the path is as dense as the
+                        // digitiser reports rather than as dense as the display refreshes.
+                        change.historical.forEach { points += it.position }
+                        points += change.position
+                        change.consume()
+                        live = points.toList()
+                        if (!change.pressed) break
+                    }
+
+                    drawing = false
+
+                    val span = spanOf(points)
+                    when {
+                        span < tapSpan -> onTap()
+                        span < letterSpan -> Unit
+                        isBackspaceStroke(points, backspaceSpan) -> onBackspace()
+                        else -> recognise(points.toList())?.let(onLetter)
+                    }
+                }
+            },
     ) {
         Box(
             modifier = Modifier
@@ -280,6 +336,21 @@ private fun androidx.compose.foundation.layout.ColumnScope.GraffitiSpace() {
                 .height(1.dp)
                 .background(Color.White.copy(alpha = 0.08f)),
         )
+
+        if (live.isNotEmpty()) {
+            Canvas(modifier = Modifier.fillMaxSize()) {
+                val path = Path().apply {
+                    moveTo(live.first().x, live.first().y)
+                    live.drop(1).forEach { lineTo(it.x, it.y) }
+                }
+                drawPath(
+                    path = path,
+                    color = Color.White.copy(alpha = 0.85f * trail.value),
+                    style = Stroke(width = TrailWidth.toPx(), cap = StrokeCap.Round),
+                )
+            }
+        }
+
         Text(
             text = "GRAFFITI INPUT",
             modifier = Modifier
@@ -296,24 +367,19 @@ private fun androidx.compose.foundation.layout.ColumnScope.GraffitiSpace() {
     }
 }
 
+/** The diagonal of the stroke's bounding box, which is how far the finger actually got. */
+private fun spanOf(points: List<Offset>): Float {
+    if (points.size < 2) return 0f
+    val width = points.maxOf { it.x } - points.minOf { it.x }
+    val height = points.maxOf { it.y } - points.minOf { it.y }
+    return hypot(width, height)
+}
+
 @Composable
 private fun Modifier.noRipple(onClick: () -> Unit): Modifier {
     val interactionSource = remember { MutableInteractionSource() }
     return clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
 }
-
-private val Tint = Color(0xFF120E0C).copy(alpha = 0.72f)
-private val IconShape = androidx.compose.foundation.shape.RoundedCornerShape(26)
-private val MetaStyle = TextStyle(
-    fontFamily = Karla,
-    fontWeight = FontWeight.Normal,
-    fontSize = 13.sp,
-    letterSpacing = 0.12.em,
-    color = Color(0xFFCFC6BD),
-)
-
-private const val Columns = 4
-private const val PerPage = 8
 
 /** The wallpaper, blurred, as the backdrop the tint sits on. */
 @Composable
@@ -332,7 +398,35 @@ private fun BlurredWallpaper(radius: Dp) {
     }
 }
 
-/** Slower than the mockup's 220ms, which was too quick to read against the keyboard rising. */
+private val Tint = Color(0xFF120E0C).copy(alpha = 0.72f)
+private val IconShape = RoundedCornerShape(26)
+
+private val QueryStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.ExtraLight,
+    fontSize = 38.sp,
+    letterSpacing = 0.04.em,
+    color = Color.White,
+)
+
+private val MetaStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.Normal,
+    fontSize = 13.sp,
+    letterSpacing = 0.12.em,
+    color = Color(0xFFCFC6BD),
+)
+
+private const val Columns = 4
+private const val PerPage = 8
+
+/** Slower than the mockup's 220ms, which was too quick to read against the entrance. */
 private const val EntranceMillis = 500
 
 private val BlurRadius = 14.dp
+
+private val TapSpan = 12.dp
+private val LetterSpan = 24.dp
+private val BackspaceSpan = 56.dp
+private val TrailWidth = 4.dp
+private const val TrailFadeMillis = 260

@@ -7,9 +7,13 @@ import com.wpinrui.harmoni.apps.IconResolver
 import com.wpinrui.harmoni.apps.SystemIconResolver
 import com.wpinrui.harmoni.context.MotionMonitor
 import com.wpinrui.harmoni.context.UsbConnection
+import com.wpinrui.harmoni.graffiti.GraffitiAlphabet
 import com.wpinrui.harmoni.search.WallpaperCache
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -31,6 +35,17 @@ class HarmoniApplication : Application() {
     lateinit var usb: UsbConnection
         private set
 
+    private val _graffiti = MutableStateFlow(GraffitiAlphabet(emptyList()))
+
+    /**
+     * The stroke templates, empty until they have been parsed.
+     *
+     * Loaded off the main thread: it is a few hundred kilobytes of JSON, and holding up the first
+     * frame of the home surface for it would trade a visible stall for a stroke nobody is drawing
+     * in the first moments after boot anyway.
+     */
+    val graffiti: StateFlow<GraffitiAlphabet> = _graffiti.asStateFlow()
+
     override fun onCreate() {
         super.onCreate()
         appIndex = AppIndex(this).apply { start() }
@@ -38,9 +53,12 @@ class HarmoniApplication : Application() {
         usb = UsbConnection(this).apply { start() }
         MotionMonitor.start(this)
 
-        // Decoded up front so the search view's backdrop is ready to fade in with everything
-        // else rather than arriving after the animation has finished.
-        CoroutineScope(Dispatchers.Default).launch { WallpaperCache.prime(this@HarmoniApplication) }
+        CoroutineScope(Dispatchers.Default).launch {
+            // Decoded up front so the search view's backdrop is ready to fade in with everything
+            // else rather than arriving after the animation has finished.
+            WallpaperCache.prime(this@HarmoniApplication)
+            _graffiti.value = GraffitiAlphabet.load(this@HarmoniApplication)
+        }
     }
 }
 

@@ -75,7 +75,7 @@ fun GraffitiCaptureScreen() {
     LaunchedEffect(Unit) {
         val stored = withContext(Dispatchers.IO) { GraffitiStore.load(context) }
         samples = stored
-        letterIndex = GraffitiAlphabet
+        letterIndex = GraffitiLetters
             .indexOfFirst { letter -> stored.count { it.letter == letter } < SamplesPerLetter }
             .coerceAtLeast(0)
     }
@@ -91,12 +91,12 @@ fun GraffitiCaptureScreen() {
     LaunchedEffect(advanceAfter) {
         val completed = advanceAfter ?: return@LaunchedEffect
         delay(AdvanceDelayMillis)
-        val next = GraffitiAlphabet.indexOf(completed) + 1
-        if (next < GraffitiAlphabet.size) letterIndex = next
+        val next = GraffitiLetters.indexOf(completed) + 1
+        if (next < GraffitiLetters.size) letterIndex = next
         advanceAfter = null
     }
 
-    val letter = GraffitiAlphabet[letterIndex]
+    val letter = GraffitiLetters[letterIndex]
     val forLetter = remember(samples, letter) { samples.filter { it.letter == letter } }
     val full = forLetter.size >= SamplesPerLetter
 
@@ -110,7 +110,7 @@ fun GraffitiCaptureScreen() {
             letter = letter,
             letterIndex = letterIndex,
             onPrevious = { if (letterIndex > 0) letterIndex-- },
-            onNext = { if (letterIndex < GraffitiAlphabet.lastIndex) letterIndex++ },
+            onNext = { if (letterIndex < GraffitiLetters.lastIndex) letterIndex++ },
         )
 
         SampleSlots(
@@ -170,12 +170,12 @@ private fun LetterHeader(
                 ),
             )
             Text(
-                text = "LETTER ${letterIndex + 1} OF ${GraffitiAlphabet.size}",
+                text = "LETTER ${letterIndex + 1} OF ${GraffitiLetters.size}",
                 style = MetaStyle,
             )
         }
 
-        Arrow(glyph = "›", enabled = letterIndex < GraffitiAlphabet.lastIndex, onClick = onNext)
+        Arrow(glyph = "›", enabled = letterIndex < GraffitiLetters.lastIndex, onClick = onNext)
     }
 }
 
@@ -304,7 +304,7 @@ private fun DrawArea(
 
 @Composable
 private fun Footer(total: Int, path: String) {
-    val target = GraffitiAlphabet.size * SamplesPerLetter
+    val target = GraffitiLetters.size * SamplesPerLetter
 
     Column(
         modifier = Modifier

@@ -14,7 +14,7 @@ import kotlin.math.round
  * Letters only. The matcher already strips whitespace from a query, and app names carry digits
  * rarely enough that they are not worth five draws each.
  */
-val GraffitiAlphabet: List<Char> = ('a'..'z').toList()
+val GraffitiLetters: List<Char> = ('a'..'z').toList()
 
 /**
  * How many times each letter is drawn.
@@ -45,6 +45,14 @@ object GraffitiStore {
 
     fun file(context: Context): File =
         File(context.getExternalFilesDir(null) ?: context.filesDir, FILE_NAME)
+
+    /** The alphabet shipped in the APK, captured once and pulled off the device. */
+    fun bundled(context: Context): List<GraffitiSample> =
+        runCatching {
+            parse(context.assets.open(FILE_NAME).bufferedReader().use { it.readText() })
+        }
+            .onFailure { Log.w(TAG, "No bundled alphabet in assets", it) }
+            .getOrDefault(emptyList())
 
     fun load(context: Context): List<GraffitiSample> {
         val file = file(context)
