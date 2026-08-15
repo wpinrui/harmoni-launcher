@@ -116,7 +116,7 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
         Column(modifier = Modifier.fillMaxSize()) {
             QueryLine(query = query)
 
-            ResultSummary(count = results.size, hasQuery = query.isNotEmpty())
+            ResultSummary(count = results.size)
 
             HorizontalPager(
                 state = pager,
@@ -169,7 +169,7 @@ private fun QueryLine(query: String) {
 }
 
 @Composable
-private fun ResultSummary(count: Int, hasQuery: Boolean) {
+private fun ResultSummary(count: Int) {
     Row(
         modifier = Modifier.padding(start = 30.dp, end = 30.dp, top = 16.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -185,8 +185,6 @@ private fun ResultSummary(count: Int, hasQuery: Boolean) {
                 .height(1.dp)
                 .background(Color.White.copy(alpha = 0.24f)),
         )
-        // Nothing to erase until something is typed.
-        if (hasQuery) Text(text = "SWIPE LEFT TO ERASE", style = MetaStyle)
     }
 }
 
@@ -227,7 +225,7 @@ private fun AppCell(entry: AppEntry, onLaunch: (AppEntry) -> Unit, modifier: Mod
             style = TextStyle(
                 fontFamily = Karla,
                 fontWeight = FontWeight.Light,
-                fontSize = 10.5.sp,
+                fontSize = 12.sp,
                 lineHeight = 1.25.em,
                 letterSpacing = 0.05.em,
                 color = Color.White.copy(alpha = 0.9f),
@@ -350,20 +348,6 @@ private fun ColumnScope.GraffitiInput(
                 )
             }
         }
-
-        Text(
-            text = "GRAFFITI INPUT",
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 30.dp, bottom = 76.dp),
-            style = TextStyle(
-                fontFamily = Karla,
-                fontWeight = FontWeight.Normal,
-                fontSize = 10.sp,
-                letterSpacing = 0.24.em,
-                color = Color.White.copy(alpha = 0.32f),
-            ),
-        )
     }
 }
 
