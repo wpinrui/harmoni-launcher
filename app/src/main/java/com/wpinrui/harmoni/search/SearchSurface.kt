@@ -1,10 +1,9 @@
 package com.wpinrui.harmoni.search
 
-import android.graphics.drawable.ColorDrawable
-import android.view.WindowManager
-import android.view.WindowManager.LayoutParams.MATCH_PARENT
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -27,7 +26,6 @@ import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -36,7 +34,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -44,20 +44,15 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
-import androidx.compose.ui.window.DialogWindowProvider
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import com.wpinrui.harmoni.apps.AppEntry
@@ -81,19 +76,6 @@ import kotlin.math.ceil
  */
 @Composable
 fun SearchSurface(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
-    Dialog(
-        onDismissRequest = onClose,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-        ),
-    ) {
-        SearchWindow(onLaunch = onLaunch, onClose = onClose)
-    }
-}
-
-@Composable
-private fun SearchWindow(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
     val context = LocalContext.current
     val entries by context.harmoni.appIndex.entries.collectAsState()
     var query by remember { mutableStateOf("") }
@@ -115,7 +97,7 @@ private fun SearchWindow(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
         label = "search-entrance",
     )
 
-    ConfigureWindow()
+    BackHandler(onBack = onClose)
 
     Box(
         modifier = Modifier
@@ -123,11 +105,15 @@ private fun SearchWindow(onLaunch: (AppEntry) -> Unit, onClose: () -> Unit) {
             .alpha(entrance)
             // Tint over blur, as the design has it: the blur softens the wallpaper, the tint
             // darkens it enough for white text to sit on.
-            .background(Tint)
             // Anywhere that is not the grid or the query closes the view. The lower half is
             // where Graffiti will live, so this is a stand-in for a stroke area, not a design.
             .noRipple(onClose),
     ) {
+        // Blur under tint, both fading with the entrance, as the design's backdrop filter does.
+        BlurredWallpaper(radius = BlurRadius * entrance)
+
+        Box(modifier = Modifier.fillMaxSize().background(Tint))
+
         Column(modifier = Modifier.fillMaxSize()) {
             QueryField(query = query, onQueryChange = { query = it })
 
@@ -329,44 +315,21 @@ private val MetaStyle = TextStyle(
 private const val Columns = 4
 private const val PerPage = 8
 
-/**
- * Sets the search view's own window up: blurred backdrop, no status bar, nothing of its own drawn.
- *
- * The blur is set once. Writing to a window's attributes forces a relayout, so doing it per frame
- * to animate the radius stalls the window until the animation ends, which reads as a jump rather
- * than a fade. The content's alpha carries the entrance instead.
- */
+/** The wallpaper, blurred, as the backdrop the tint sits on. */
 @Composable
-private fun ConfigureWindow() {
-    val view = LocalView.current
-    val radius = with(LocalDensity.current) { BlurRadius.roundToPx() }
-    val window = (view.parent as? DialogWindowProvider)?.window
+private fun BlurredWallpaper(radius: Dp) {
+    val wallpaper by rememberWallpaper()
 
-    DisposableEffect(window) {
-        if (window == null) return@DisposableEffect onDispose { }
-
-        window.setLayout(MATCH_PARENT, MATCH_PARENT)
-        window.setBackgroundDrawable(ColorDrawable(android.graphics.Color.TRANSPARENT))
-        // A dialog dims what is behind it by default, which over a blurred wallpaper reads as a
-        // black sheet. The blur is the whole effect here.
-        window.clearFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND)
-        window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
-        window.attributes = window.attributes.apply {
-            blurBehindRadius = radius
-            layoutInDisplayCutoutMode =
-                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_ALWAYS
-        }
-
-        // The home surface hides the status bar; a new window does not inherit that, and would
-        // otherwise leave a black band across the top of the blur.
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-        WindowInsetsControllerCompat(window, view).apply {
-            hide(WindowInsetsCompat.Type.statusBars())
-            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-
-        onDispose { window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND) }
+    wallpaper?.let {
+        Image(
+            bitmap = it,
+            contentDescription = null,
+            modifier = Modifier
+                .fillMaxSize()
+                .blur(radius, BlurredEdgeTreatment.Unbounded),
+            contentScale = ContentScale.Crop,
+        )
     }
 }
 
-private val BlurRadius = 40.dp
+private val BlurRadius = 14.dp

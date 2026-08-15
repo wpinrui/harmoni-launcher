@@ -1,5 +1,6 @@
 package com.wpinrui.harmoni
 
+import android.Manifest
 import android.content.Intent
 import android.graphics.Color
 import android.os.Bundle
@@ -56,9 +57,7 @@ class HomeActivity : ComponentActivity() {
 
         // Home is the bottom of the stack. Finishing it would expose whatever sits behind the
         // launcher, so back does nothing.
-        if (!hasMotionPermission()) {
-            requestMotion.launch(android.Manifest.permission.ACTIVITY_RECOGNITION)
-        }
+        if (!hasMotionPermission()) requestMotion.launch(Manifest.permission.ACTIVITY_RECOGNITION)
 
         onBackPressedDispatcher.addCallback(this) {}
     }
