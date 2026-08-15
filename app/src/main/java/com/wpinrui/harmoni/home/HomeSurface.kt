@@ -10,8 +10,10 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 
 /**
@@ -26,6 +28,8 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     var surface by remember { mutableStateOf(Size.Zero) }
     var rejectCount by remember { mutableIntStateOf(0) }
+    var ringCentre by remember { mutableStateOf<Offset?>(null) }
+    val context = LocalContext.current
 
     Box(
         modifier = modifier
@@ -35,7 +39,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                 when (gesture) {
                     is HomeGesture.Tap ->
                         if (RingPlacement.fits(gesture.position, surface, density)) {
-                            Log.d(TAG, "Ring at ${gesture.position}")
+                            ringCentre = gesture.position
                         } else {
                             rejectCount++
                             Log.d(TAG, "Tap rejected, too near an edge: ${gesture.position}")
@@ -56,6 +60,20 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     ) {
         ClockBlock()
         EdgeRejectFlash(rejectCount = rejectCount)
+
+        ringCentre?.let { centre ->
+            Ring(
+                centre = centre,
+                onPick = { target ->
+                    ringCentre = null
+                    context.launch(target)
+                },
+                onDismiss = {
+                    Log.d(TAG, "Ring dismissed without a pick")
+                    ringCentre = null
+                },
+            )
+        }
     }
 }
 
