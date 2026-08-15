@@ -1,30 +1,5 @@
 # harmoni-launcher
 
-## MVP mode — ACTIVE until I say "MVP shipped"
-Pre-MVP, shipping speed beats everything. Where this section disagrees with any rule below it, **this section wins**. Do not ask me to confirm any of it.
-
-Suspended until MVP ships:
-- The whole **Code quality bar** section. No SOLID/DRY/KISS/YAGNI passes, no splitting a file at 500 lines, no deduplication, no dead-code sweeps, no magic-number extraction, no nesting refactors. Ugly and shipped beats clean and pending.
-- Tests, typecheck, and lint. Don't write them, don't run them, don't fix a red one, don't report on them. A failing gate is not a blocker.
-- `/review`. Never run it, never offer it, never mention it.
-- Merge authorization. `-m` is not required and not wanted. Finish a slice, land it, keep going. No pre-merge checklist, no waiting, no asking. **The branch and PR themselves are not suspended** (see below); only the gate in front of the merge is.
-- Requirements rounds. Don't open with MCQs. Take the sensible reading, build it, then state the assumption in one line so I can veto it.
-- Commit hygiene. Batch freely. Atomicity, "commit as you build", and amend-don't-stack are all off.
-- Doc currency. README and SPEC drift is fine.
-- The lettered handoff menu. One or two lines on what changed and what I can try instead.
-
-Still on, because none of it is code quality:
-- Conventional Commit subjects. The husky `commit-msg` hook runs commitlint and will reject anything else, and `--no-verify` stays out of bounds.
-- Confirm-first on anything that destroys work: force-push, history rewrite, deleting unmerged work.
-- No secrets committed.
-- Everything in **Working with me** about how you talk to me: no em-dashes, no unmeasured claims, no "did you refresh", report what you observed rather than what you intended.
-
-**Branching and merging are NOT suspended.** Every change still goes on a `<type>/<kebab-summary>` branch, still gets a PR, and still lands by squash-merge with the branch deleted. Never commit straight to `main`, even though `main` has no enforced protection (a private repo on this plan cannot enable it). MVP mode removes the review and the wait, not the workflow: I still want every slice as a revertable unit with a PR behind it.
-
-**Exit:** when I say MVP has shipped, delete this section. Everything below applies again in full, and the first task after that is paying down whatever this let through.
-
-
-
 ## Environment
 - GitHub user: `wpinrui`.
 - Use `python`, never `python3`.

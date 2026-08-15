@@ -57,7 +57,6 @@ import com.wpinrui.harmoni.ui.theme.Karla
 import com.wpinrui.harmoni.ui.theme.noRipple
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import androidx.compose.runtime.getValue
 
 /**
  * The one composed block on the home surface: clock, date, battery, notification badges, the

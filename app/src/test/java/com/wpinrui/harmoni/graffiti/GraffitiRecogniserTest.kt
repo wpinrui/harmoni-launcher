@@ -44,10 +44,10 @@ class GraffitiRecogniserTest {
 
     @Test
     fun `scaling is uniform, so aspect ratio still separates two shapes`() {
-        // An L drawn tall against an L drawn wide. Scaling each axis to a square, which is what
-        // the published algorithm does, would collapse these onto each other.
-        val tall = polyline(listOf(Offset(0f, 0f), Offset(0f, 400f), Offset(100f, 400f)))
-        val wide = polyline(listOf(Offset(0f, 0f), Offset(0f, 100f), Offset(400f, 100f)))
+        // Two diagonals of reciprocal aspect. Scaling each axis to a square, which is what the
+        // published algorithm does, maps both onto the same normalised sequence and scores 1.
+        val tall = line(Offset(0f, 0f), Offset(100f, 400f))
+        val wide = line(Offset(0f, 0f), Offset(400f, 100f))
 
         val match = GraffitiRecogniser.recognise(wide, templates('a' to tall), floor = 0f)
 

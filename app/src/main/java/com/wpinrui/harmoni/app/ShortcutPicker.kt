@@ -97,6 +97,6 @@ private fun ShortcutIcon(shortcut: AppShortcut) {
     }
 
     icon?.let {
-        Image(bitmap = it, contentDescription = null, modifier = Modifier.size(30.dp))
+        Image(bitmap = it, contentDescription = null, modifier = Modifier.size(IconSize))
     }
 }

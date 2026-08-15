@@ -17,7 +17,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.withContext
-import androidx.core.net.toUri
 
 /**
  * The wallpaper as a bitmap, for drawing a blurred copy of it inside the launcher's own window.

@@ -73,9 +73,10 @@ class AppMatcherTest {
         // "clcok" is not a subsequence of Clock in any order, so only edit distance can find it.
         assertEquals(listOf("Clock"), AppMatcher.match(entries("Clock"), "clcok").labels())
 
-        // "cl" is a subsequence of both, so neither edit-distance neighbour may be added.
-        val both = AppMatcher.match(entries("Clock", "Calculator"), "cl")
-        assertEquals(2, both.size)
+        // Clocs is one edit from the query but is not a subsequence of it, so the tier that
+        // would have found it must not run while Clock matches in order.
+        val exact = AppMatcher.match(entries("Clock", "Clocs"), "clock").labels()
+        assertEquals(listOf("Clock"), exact)
     }
 
     @Test

@@ -16,7 +16,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,14 +56,11 @@ fun PermissionHealth() {
         onPauseOrDispose {}
     }
 
-    val permissions by produceState(
-        initialValue = emptyList<Permission>(),
-        context,
-        listenerBound,
-        shadeBound,
-        resumes,
-    ) {
-        value = listOf(
+    // Read straight through rather than through produceState, whose producer runs on the
+    // composition's context: it would defer six cheap synchronous checks by a frame without
+    // moving any of them off the main thread.
+    val permissions = remember(context, listenerBound, shadeBound, resumes) {
+        listOf(
             Permission("Notification listener", context.hasNotificationAccess(), notificationIntent(context)),
             Permission("Media sessions", listenerBound, notificationIntent(context)),
             Permission("Usage access", context.hasUsageAccess(), usageAccessIntent(context)),
