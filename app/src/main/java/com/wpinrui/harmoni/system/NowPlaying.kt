@@ -12,6 +12,7 @@ import androidx.compose.runtime.State
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
+import com.wpinrui.harmoni.home.HomeBindings
 
 /** What the music element shows when something is playing. */
 data class NowPlaying(val title: String, val artist: String?) {
@@ -25,8 +26,8 @@ data class NowPlaying(val title: String, val artist: String?) {
  * Reading sessions is gated on notification access, which is the same grant the badges need, so
  * the music element sits in its idle state until that is given.
  *
- * The session is whichever app is playing, not YouTube Music specifically. Tapping the element
- * still opens YouTube Music, per the design document.
+ * Only YouTube Music counts. Anything else playing leaves the element idle, which keeps what the
+ * element shows and what tapping it opens the same app.
  */
 @Composable
 fun rememberNowPlaying(): State<NowPlaying?> {
@@ -49,8 +50,8 @@ fun rememberNowPlaying(): State<NowPlaying?> {
         fun rebind(active: List<MediaController>) {
             callbacks.forEach { (controller, callback) -> controller.unregisterCallback(callback) }
             callbacks.clear()
-            controllers = active
-            active.forEach { controller ->
+            controllers = active.filter { it.packageName == HomeBindings.YOUTUBE_MUSIC }
+            controllers.forEach { controller ->
                 val callback = object : MediaController.Callback() {
                     override fun onPlaybackStateChanged(state: PlaybackState?) = publish()
                     override fun onMetadataChanged(metadata: MediaMetadata?) = publish()
