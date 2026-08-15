@@ -15,7 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import com.wpinrui.harmoni.context.ContextualRing
 import com.wpinrui.harmoni.diagnostics.Diagnostics
 import androidx.compose.ui.platform.LocalDensity
@@ -45,6 +47,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val contextual = remember(context) { ContextualRing(context) }
     val alphabet by context.harmoni.graffiti.collectAsState()
+    val haptics = LocalHapticFeedback.current
 
     // Coming home while the ring or the app list is up means "get me back to the wallpaper".
     LaunchedEffect(Unit) {
@@ -74,6 +77,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                             // surface keeps both halves of a double tap.
                             ringInteractive = false
                             ringCentre = gesture.position
+                            haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
                         } else {
                             rejectCount++
                             Diagnostics.recordEdgeReject(context)
@@ -92,6 +96,9 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                             // A long press cannot be half a double tap, so this one is live at once.
                             ringInteractive = true
                             ringCentre = gesture.position
+                            // Heavier than the tap ring's: the finger is still down and this is
+                            // the only signal that waiting has paid off.
+                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                         } else {
                             rejectCount++
                             Diagnostics.recordEdgeReject(context)

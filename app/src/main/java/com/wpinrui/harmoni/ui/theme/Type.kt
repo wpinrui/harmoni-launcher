@@ -22,3 +22,23 @@ private fun karla(weight: FontWeight) = Font(
     weight = weight,
     variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
 )
+
+/**
+ * The turned v, U+028C, which the wordmark sets in place of an A.
+ *
+ * Karla does not have the glyph: the shipped file and the upstream variable font both carry 393
+ * codepoints and it is in neither. The mockups declare `Karla, system-ui, sans-serif`, so what
+ * they render is the browser's fallback. This is that fallback made deliberate, subset from Inter
+ * to the single glyph it is needed for.
+ */
+val TurnedV = FontFamily(
+    turnedV(FontWeight.ExtraLight),
+    turnedV(FontWeight.Light),
+    turnedV(FontWeight.Normal),
+)
+
+private fun turnedV(weight: FontWeight) = Font(
+    resId = R.font.inter_turned_v,
+    weight = weight,
+    variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
+)
