@@ -1,0 +1,40 @@
+package com.wpinrui.harmoni
+
+import android.graphics.Color
+import android.os.Bundle
+import androidx.activity.ComponentActivity
+import androidx.activity.SystemBarStyle
+import androidx.activity.addCallback
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import com.wpinrui.harmoni.home.HomeSurface
+import com.wpinrui.harmoni.ui.theme.HarmoniTheme
+
+/**
+ * The home surface, registered for CATEGORY_HOME.
+ *
+ * Nothing is drawn here yet beyond the wallpaper showing through. Section 1's clock block and
+ * Section 3's gesture layer both attach to [HomeSurface].
+ */
+class HomeActivity : ComponentActivity() {
+
+    override fun onCreate(savedInstanceState: Bundle?) {
+        // Transparent bars, light icons: the wallpaper is what shows behind them, and a scrim
+        // would put a band across the top and bottom of it.
+        enableEdgeToEdge(
+            statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+            navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
+        )
+        super.onCreate(savedInstanceState)
+
+        setContent {
+            HarmoniTheme {
+                HomeSurface()
+            }
+        }
+
+        // Home is the bottom of the stack. Finishing it would expose whatever sits behind the
+        // launcher, so back does nothing.
+        onBackPressedDispatcher.addCallback(this) {}
+    }
+}

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!--
+        Package visibility. Without this the app index would only see apps Harmoni has already
+        interacted with until it is made the default home app. Matching MAIN + LAUNCHER gives
+        exactly the launchable set, which is all the launcher ever shows, so QUERY_ALL_PACKAGES
+        is not needed.
+    -->
+    <queries>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".HarmoniApplication"
+        android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.Harmoni">
+
+        <!--
+            configChanges is deliberately broad: the home surface holds live gesture state and
+            recreating it on a rotation or a theme change would drop a stroke mid-letter.
+        -->
+        <activity
+            android:name=".HomeActivity"
+            android:clearTaskOnLaunch="true"
+            android:configChanges="density|fontScale|keyboard|keyboardHidden|layoutDirection|locale|navigation|orientation|screenLayout|screenSize|smallestScreenSize|uiMode"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:launchMode="singleTask"
+            android:stateNotNeeded="true"
+            android:theme="@style/Theme.Harmoni.Home">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.HOME" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+    </application>
+
+</manifest>

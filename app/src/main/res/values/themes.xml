@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Used by anything opened as an ordinary app, such as the launcher app screen. -->
+    <style name="Theme.Harmoni" parent="@android:style/Theme.DeviceDefault.NoActionBar" />
+
+    <!--
+        The home surface. The Wallpaper parent sets FLAG_SHOW_WALLPAPER and a transparent window
+        background, so the live wallpaper is what shows behind everything Harmoni draws. Nothing
+        in the Compose tree may paint an opaque background over it.
+    -->
+    <style name="Theme.Harmoni.Home" parent="@android:style/Theme.DeviceDefault.Wallpaper.NoTitleBar">
+        <!-- The launcher has no splash: a preview window would flash over the wallpaper. -->
+        <item name="android:windowDisablePreview">true</item>
+        <item name="android:windowLayoutInDisplayCutoutMode">always</item>
+    </style>
+
+</resources>

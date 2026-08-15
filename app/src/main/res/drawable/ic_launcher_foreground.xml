@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The ring motif: eight positions around a touch point. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M69.5,54 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0
+                          M63.64,39.86 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0
+                          M49.5,34 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0
+                          M35.36,39.86 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0
+                          M29.5,54 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0
+                          M35.36,68.14 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0
+                          M49.5,74 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0
+                          M63.64,68.14 a4.5,4.5 0 1,0 9,0 a4.5,4.5 0 1,0 -9,0" />
+</vector>
