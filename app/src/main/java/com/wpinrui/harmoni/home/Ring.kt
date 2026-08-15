@@ -48,9 +48,8 @@ import kotlin.math.sin
  * pick. The centre dismisses, and so does anywhere outside an icon, since a ring you cannot get
  * rid of by tapping away would be a trap.
  *
- * Icons grow out of the centre with a short stagger, as in `design/LauncherPhone.dc.html`. The
- * mockup blurs what is behind each icon; Compose cannot blur a backdrop without capturing it
- * first, so these are translucent instead.
+ * Icons grow out of the centre with a short stagger. The design blurs what is behind each icon;
+ * Compose cannot blur a backdrop without capturing it first, so these are translucent instead.
  */
 @Composable
 fun Ring(

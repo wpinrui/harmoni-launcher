@@ -8,10 +8,9 @@ import androidx.compose.ui.unit.dp
 /**
  * Where a ring may be summoned, and how big it is when it appears.
  *
- * The numbers come from `design/LauncherPhone.dc.html`. The margin is not a separate figure there:
- * it is the radius plus half an icon plus a little air, which is exactly the distance at which the
- * outermost icon would touch the screen edge. Deriving it means the two cannot drift apart when
- * the radius is tuned.
+ * The margin is not a separate figure: it is the radius plus half an icon plus a little air,
+ * which is exactly the distance at which the outermost icon would touch the screen edge. Deriving
+ * it means the two cannot drift apart when the radius is tuned.
  *
  * Sections 2 and 3 share this. The contextual ring has the same geometry and the same rule.
  */

@@ -64,7 +64,8 @@ import java.util.Locale
  * The one composed block on the home surface: clock, date, battery, notification badges, the
  * music element and the YouTube link, as a single visual unit.
  *
- * Measurements follow `design/LauncherPhone.dc.html`. Everything outside the block is left free
+ * Measurements came from the design mockups, which the built launcher has since replaced as the
+ * source of truth. Everything outside the block is left free
  * for the wallpaper, ring taps and Graffiti strokes, so the block claims no more width than its
  * content and takes touches only on the rows that are actually bound to something.
  *
