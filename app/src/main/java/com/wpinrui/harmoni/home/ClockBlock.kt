@@ -1,6 +1,7 @@
 package com.wpinrui.harmoni.home
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,6 +22,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -112,19 +114,23 @@ private fun Badges() {
         horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HomeBindings.badged.forEach { packageName ->
+        HomeBindings.badged.forEach { badge ->
             Row(
                 modifier = Modifier
-                    .tappable { context.launchApp(packageName) }
+                    .tappable { context.launchApp(badge.packageName) }
                     .padding(vertical = 11.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                AppIcon(packageName = packageName, size = 24.dp)
+                Image(
+                    painter = painterResource(badge.icon),
+                    contentDescription = null,
+                    modifier = Modifier.size(24.dp),
+                )
                 // The number is dropped at zero rather than shown as "0", but its width is held
                 // so the badges do not shuffle sideways as notifications come and go.
                 Text(
-                    text = counts[packageName]?.takeIf { it > 0 }?.toString().orEmpty(),
+                    text = counts[badge.packageName]?.takeIf { it > 0 }?.toString().orEmpty(),
                     modifier = Modifier.widthIn(min = 18.dp),
                     style = CountStyle,
                 )
