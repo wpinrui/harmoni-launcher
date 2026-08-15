@@ -38,7 +38,6 @@ import com.wpinrui.harmoni.search.SearchSurface
 fun HomeSurface(modifier: Modifier = Modifier) {
     val density = LocalDensity.current
     var surface by remember { mutableStateOf(Size.Zero) }
-    var rejectCount by remember { mutableIntStateOf(0) }
     var ringCentre by remember { mutableStateOf<Offset?>(null) }
     var slots by remember { mutableStateOf(emptyList<RingTarget?>()) }
     var ringInteractive by remember { mutableStateOf(true) }
@@ -76,19 +75,14 @@ fun HomeSurface(modifier: Modifier = Modifier) {
             .onSizeChanged { surface = Size(it.width.toFloat(), it.height.toFloat()) }
             .homeGestures { gesture ->
                 when (gesture) {
-                    is HomeGesture.Tap ->
-                        if (RingPlacement.fits(gesture.position, surface, density)) {
-                            slots = fixed
-                            // Deaf until the moment a second tap could no longer arrive, so the
-                            // surface keeps both halves of a double tap.
-                            ringInteractive = false
-                            ringCentre = gesture.position
-                            haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
-                        } else {
-                            rejectCount++
-                            Diagnostics.recordEdgeReject(context)
-                            Log.d(TAG, "Tap rejected, too near an edge: ${gesture.position}")
-                        }
+                    is HomeGesture.Tap -> {
+                        slots = fixed
+                        // Deaf until the moment a second tap could no longer arrive, so the
+                        // surface keeps both halves of a double tap.
+                        ringInteractive = false
+                        ringCentre = RingPlacement.clamp(gesture.position, surface, density)
+                        haptics.performHapticFeedback(HapticFeedbackType.ContextClick)
+                    }
 
                     is HomeGesture.DoubleTap -> {
                         ringCentre = null
@@ -96,20 +90,15 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                         searchOpen = true
                     }
 
-                    is HomeGesture.LongPress ->
-                        if (RingPlacement.fits(gesture.position, surface, density)) {
-                            slots = contextual.slots()
-                            // A long press cannot be half a double tap, so this one is live at once.
-                            ringInteractive = true
-                            ringCentre = gesture.position
-                            // Heavier than the tap ring's: the finger is still down and this is
-                            // the only signal that waiting has paid off.
-                            haptics.performHapticFeedback(HapticFeedbackType.LongPress)
-                        } else {
-                            rejectCount++
-                            Diagnostics.recordEdgeReject(context)
-                            Log.d(TAG, "Long press rejected, too near an edge: ${gesture.position}")
-                        }
+                    is HomeGesture.LongPress -> {
+                        slots = contextual.slots()
+                        // A long press cannot be half a double tap, so this one is live at once.
+                        ringInteractive = true
+                        ringCentre = RingPlacement.clamp(gesture.position, surface, density)
+                        // Heavier than the tap ring's: the finger is still down and this is
+                        // the only signal that waiting has paid off.
+                        haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    }
 
                     // Section 4 opens the search view on the first stroke, carrying that letter.
                     // A stroke that matches nothing is left alone: opening an empty search would
@@ -128,7 +117,6 @@ fun HomeSurface(modifier: Modifier = Modifier) {
             },
     ) {
         ClockBlock()
-        EdgeRejectFlash(rejectCount = rejectCount)
 
         ringCentre?.let { centre ->
             Ring(

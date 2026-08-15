@@ -15,8 +15,9 @@ and three gestures on the empty space around it.
 Early. Harmoni can be set as the home app and draws the clock block over the wallpaper: time,
 date, battery, notification badges, the music element and the YouTube link. Tapping the empty
 surface summons the ring of eight, which picks on the next tap and dismisses on the centre or
-anywhere outside. Long press summons the contextual ring instead. A tap too near an edge flashes
-and is refused. Double tap opens every installed app. Drawing a letter opens the same view
+anywhere outside. Long press summons the contextual ring instead. Touch near an edge and the ring
+centres itself at the closest point that still fits, rather than being refused. Double tap opens
+every installed app. Drawing a letter opens the same view
 filtered by it, and further letters are drawn in the space below the grid, with a right to left
 swipe to erase.
 

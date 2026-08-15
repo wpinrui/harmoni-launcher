@@ -24,17 +24,27 @@ object RingPlacement {
     val EdgeMargin = Radius + IconSize / 2 + Breathing
 
     /**
-     * Whether the full ring fits around [position].
+     * The nearest point to [position] where the whole ring still fits.
      *
-     * A tap too near an edge does not register at all, rather than summoning a ring with icons
-     * pushed off screen or shuffled inward, which would break the fixed positions Section 2
-     * depends on.
+     * A touch near an edge moves the centre in rather than being refused: the ring keeps all eight
+     * icons on screen and the fixed positions Section 2 depends on, and the finger is never told
+     * that where it landed was wrong. Only the axis that runs out of room moves, so a touch near
+     * the left edge slides right and not down.
+     *
+     * On a surface too small to hold the ring on an axis, that axis centres, which is the closest
+     * it can get to fitting.
      */
-    fun fits(position: Offset, surface: Size, density: Density): Boolean {
+    fun clamp(position: Offset, surface: Size, density: Density): Offset {
         val margin = with(density) { EdgeMargin.toPx() }
-        return position.x >= margin &&
-            position.y >= margin &&
-            position.x <= surface.width - margin &&
-            position.y <= surface.height - margin
+
+        return Offset(
+            x = clampAxis(position.x, margin, surface.width),
+            y = clampAxis(position.y, margin, surface.height),
+        )
+    }
+
+    private fun clampAxis(value: Float, margin: Float, extent: Float): Float {
+        val high = extent - margin
+        return if (margin > high) extent / 2f else value.coerceIn(margin, high)
     }
 }
