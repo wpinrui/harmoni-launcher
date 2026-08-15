@@ -1,27 +1,42 @@
 package com.wpinrui.harmoni.home
 
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asComposeRenderEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
@@ -30,14 +45,15 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
-import androidx.compose.material3.Text
 import com.wpinrui.harmoni.apps.AppIcon
 import com.wpinrui.harmoni.system.NotificationCounts
+import com.wpinrui.harmoni.system.NowPlaying
 import com.wpinrui.harmoni.system.rememberBatteryPercent
 import com.wpinrui.harmoni.system.rememberClock
 import com.wpinrui.harmoni.system.rememberIs24Hour
 import com.wpinrui.harmoni.system.rememberNowPlaying
 import com.wpinrui.harmoni.ui.theme.Karla
+import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -48,51 +64,83 @@ import java.util.Locale
  * Measurements follow `design/LauncherPhone.dc.html`. Everything outside the block is left free
  * for the wallpaper, ring taps and Graffiti strokes, so the block claims no more width than its
  * content and takes touches only on the rows that are actually bound to something.
+ *
+ * The block is drawn twice. The first pass is the same content blacked out, blurred and dropped a
+ * few dp, which is the shadow; the second is the block itself. A text shadow only reaches text,
+ * and the icons need to lift off the wallpaper just as much as the clock does.
  */
 @Composable
 fun ClockBlock(modifier: Modifier = Modifier) {
+    val state = BlockState(
+        time = rememberClock().value,
+        is24Hour = rememberIs24Hour(),
+        battery = rememberBatteryPercent().value,
+        counts = NotificationCounts.counts.collectAsState().value,
+        nowPlaying = rememberNowPlaying().value,
+    )
+
+    Box(modifier = modifier) {
+        BlockContent(
+            state = state,
+            shadowPass = true,
+            modifier = Modifier
+                .offset(y = ShadowDrop)
+                .blur(ShadowBlur, BlurredEdgeTreatment.Unbounded)
+                .silhouette(ShadowAlpha),
+        )
+        BlockContent(state = state, shadowPass = false)
+    }
+}
+
+/** Everything the block draws, read once and handed to both passes. */
+private data class BlockState(
+    val time: LocalDateTime,
+    val is24Hour: Boolean,
+    val battery: Int,
+    val counts: Map<String, Int>,
+    val nowPlaying: NowPlaying?,
+)
+
+@Composable
+private fun BlockContent(
+    state: BlockState,
+    shadowPass: Boolean,
+    modifier: Modifier = Modifier,
+) {
     Column(
         modifier = modifier.padding(start = 30.dp, top = 74.dp),
         verticalArrangement = Arrangement.spacedBy(22.dp),
         horizontalAlignment = Alignment.Start,
     ) {
-        TimeAndStatus()
-        Badges()
-        MusicAndLink()
+        TimeAndStatus(state, shadowPass)
+        Badges(state.counts, shadowPass)
+        MusicAndLink(state.nowPlaying, shadowPass)
     }
 }
 
 @Composable
-private fun TimeAndStatus() {
-    val time by rememberClock()
-    val battery by rememberBatteryPercent()
-    val is24Hour = rememberIs24Hour()
-
-    val timeFormat = remember(is24Hour) {
-        DateTimeFormatter.ofPattern(if (is24Hour) "H:mm" else "h:mm", Locale.getDefault())
+private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
+    val timeFormat = remember(state.is24Hour) {
+        DateTimeFormatter.ofPattern(if (state.is24Hour) "H:mm" else "h:mm", Locale.getDefault())
     }
     val dateFormat = remember { DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()) }
 
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
-            text = time.format(timeFormat),
-            // The mockup pulls the clock 5px left off the block's edge. Compose rejects negative
-            // padding, so the nudge is an offset.
-            modifier = Modifier.offset(x = (-5).dp),
-            style = TextStyle(
-                fontFamily = Karla,
-                fontWeight = FontWeight.ExtraLight,
-                fontSize = 80.sp,
-                lineHeight = 0.86.em,
-                letterSpacing = (-0.035).em,
-                color = Color.White,
-                shadow = BlockShadow,
-            ),
+            text = state.time.format(timeFormat),
+            modifier = Modifier
+                // The mockup pulls the clock 5px left off the block's edge. Compose rejects
+                // negative padding, so the nudge is an offset.
+                .offset(x = (-5).dp)
+                // At 80sp the same shadow that makes 11sp legible reads as a smear, so the
+                // clock's share of the silhouette is dialled back.
+                .alpha(if (shadowPass) ClockShadowShare else 1f),
+            style = ClockStyle,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                text = time.format(dateFormat).uppercase(Locale.getDefault()),
+                text = state.time.format(dateFormat).uppercase(Locale.getDefault()),
                 style = CapsStyle,
             )
             Row(
@@ -101,26 +149,26 @@ private fun TimeAndStatus() {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 BatteryGlyph()
-                Text(text = "$battery%", style = CapsStyle)
+                Text(text = "${state.battery}%", style = CapsStyle)
             }
         }
     }
 }
 
 @Composable
-private fun Badges() {
+private fun Badges(counts: Map<String, Int>, shadowPass: Boolean) {
     val context = LocalContext.current
-    val counts by NotificationCounts.counts.collectAsState()
 
     Row(
         modifier = Modifier.padding(top = 5.dp),
-        horizontalArrangement = Arrangement.spacedBy(20.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        HomeBindings.badged.forEach { badge ->
+        HomeBindings.badged.forEachIndexed { index, badge ->
+            val count = counts[badge.packageName] ?: 0
+
             Row(
                 modifier = Modifier
-                    .tappable { context.launchApp(badge.packageName) }
+                    .tappable(!shadowPass) { context.launchApp(badge.packageName) }
                     .padding(vertical = 11.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -128,121 +176,129 @@ private fun Badges() {
                 Image(
                     painter = painterResource(badge.icon),
                     contentDescription = null,
-                    modifier = Modifier.size(24.dp),
+                    modifier = Modifier.size(BadgeIconSize),
                 )
-                // The number is dropped at zero rather than shown as "0", but its width is held
-                // so the badges do not shuffle sideways as notifications come and go.
-                Text(
-                    text = counts[badge.packageName]?.takeIf { it > 0 }?.toString().orEmpty(),
-                    modifier = Modifier.widthIn(min = 18.dp),
-                    style = CountStyle,
-                )
+                // Nothing at zero, not even reserved width. The count keeps a floor so a badge
+                // does not jump as it crosses from one digit to two, and stops at 99+ so a noisy
+                // app cannot push the row wider than the block.
+                if (count > 0) {
+                    Text(
+                        text = if (count > MaxBadgeCount) "$MaxBadgeCount+" else count.toString(),
+                        modifier = Modifier.widthIn(min = 18.dp),
+                        style = CountStyle,
+                    )
+                }
+            }
+
+            // A numbered badge needs air before the next icon. A bare one only needs enough to
+            // read as a separate icon, so it takes half an icon width.
+            if (index != HomeBindings.badged.lastIndex) {
+                Spacer(Modifier.width(if (count > 0) 20.dp else BadgeIconSize / 2))
             }
         }
     }
 }
 
 @Composable
-private fun MusicAndLink() {
+private fun MusicAndLink(nowPlaying: NowPlaying?, shadowPass: Boolean) {
     val context = LocalContext.current
-    val nowPlaying by rememberNowPlaying()
 
     Column(modifier = Modifier.offset(y = (-9).dp)) {
         Row(
             modifier = Modifier
-                .tappable { context.launchApp(HomeBindings.YOUTUBE_MUSIC) }
+                .tappable(!shadowPass) { context.launchApp(HomeBindings.YOUTUBE_MUSIC) }
                 .padding(vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             MusicGlyph(playing = nowPlaying != null)
+            // Idle is a label, so it matches YOUTUBE. Playing is a track name, which cannot be
+            // uppercased without mangling it, so it keeps its own style.
             Text(
-                text = nowPlaying?.line ?: "Music",
+                text = nowPlaying?.line ?: "MUSIC",
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = 300.dp),
-                style = TextStyle(
-                    fontFamily = Karla,
-                    fontWeight = FontWeight.Light,
-                    fontSize = 14.sp,
-                    letterSpacing = 0.03.em,
-                    color = Color.White,
-                    shadow = BlockShadow,
-                ),
+                style = if (nowPlaying == null) LinkLabelStyle else TrackStyle,
             )
         }
 
         Row(
             modifier = Modifier
-                .tappable { context.launchApp(HomeBindings.YOUTUBE) }
+                .tappable(!shadowPass) { context.launchApp(HomeBindings.YOUTUBE) }
                 .padding(vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            AppIcon(packageName = HomeBindings.YOUTUBE, size = 24.dp)
-            Text(
-                text = "YOUTUBE",
-                style = TextStyle(
-                    fontFamily = Karla,
-                    fontWeight = FontWeight.Normal,
-                    fontSize = 11.sp,
-                    letterSpacing = 0.26.em,
-                    color = Color.White.copy(alpha = 0.92f),
-                    shadow = BlockShadow,
-                ),
-            )
+            AppIcon(packageName = HomeBindings.YOUTUBE, size = BadgeIconSize)
+            Text(text = "YOUTUBE", style = LinkLabelStyle)
         }
     }
 }
 
-/** Bars while something plays, a note while nothing does. */
+/** Bars while something plays, a quaver while nothing does. */
 @Composable
 private fun MusicGlyph(playing: Boolean) {
-    Box(
-        modifier = Modifier.size(24.dp),
-        contentAlignment = Alignment.Center,
-    ) {
-        Canvas(modifier = Modifier.size(24.dp)) {
-            drawCircle(
-                color = Color.White.copy(alpha = 0.75f),
-                radius = size.minDimension / 2 - 0.5.dp.toPx(),
-                style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.dp.toPx()),
+    Canvas(modifier = Modifier.size(BadgeIconSize)) {
+        drawCircle(
+            color = Color.White.copy(alpha = 0.75f),
+            radius = size.minDimension / 2 - 0.5.dp.toPx(),
+            style = Stroke(width = 1.dp.toPx()),
+        )
+
+        val centre = Offset(size.width / 2, size.height / 2)
+        if (playing) {
+            val barWidth = 2.dp.toPx()
+            val gap = 2.5.dp.toPx()
+            val heights = listOf(9.dp.toPx(), 13.dp.toPx(), 6.dp.toPx())
+            val totalWidth = heights.size * barWidth + (heights.size - 1) * gap
+            var x = centre.x - totalWidth / 2
+            heights.forEach { height ->
+                drawRoundRect(
+                    color = Color.White,
+                    topLeft = Offset(x, centre.y - height / 2),
+                    size = Size(barWidth, height),
+                    cornerRadius = CornerRadius(barWidth / 2),
+                )
+                x += barWidth + gap
+            }
+        } else {
+            // A quaver: tilted notehead, stem rising out of its right shoulder, flag hooking off
+            // the top. The stem runs down into the head so the two are one shape rather than a
+            // line sitting near an oval.
+            val headWidth = 7.dp.toPx()
+            val headHeight = 5.dp.toPx()
+            val stemWidth = 1.4.dp.toPx()
+            val headCentre = Offset(centre.x - 2.2.dp.toPx(), centre.y + 3.5.dp.toPx())
+            val stemX = headCentre.x + headWidth / 2 - stemWidth / 2
+            val stemTop = centre.y - 6.5.dp.toPx()
+
+            drawLine(
+                color = Color.White,
+                start = Offset(stemX, headCentre.y),
+                end = Offset(stemX, stemTop),
+                strokeWidth = stemWidth,
+                cap = StrokeCap.Round,
             )
 
-            val centre = Offset(size.width / 2, size.height / 2)
-            if (playing) {
-                val barWidth = 2.dp.toPx()
-                val gap = 2.5.dp.toPx()
-                val heights = listOf(9.dp.toPx(), 13.dp.toPx(), 6.dp.toPx())
-                val totalWidth = heights.size * barWidth + (heights.size - 1) * gap
-                var x = centre.x - totalWidth / 2
-                heights.forEach { height ->
-                    drawRoundRect(
-                        color = Color.White,
-                        topLeft = Offset(x, centre.y - height / 2),
-                        size = Size(barWidth, height),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(barWidth / 2),
-                    )
-                    x += barWidth + gap
-                }
-            } else {
-                val stemX = centre.x + 2.5.dp.toPx()
-                drawRoundRect(
-                    color = Color.White,
-                    topLeft = Offset(stemX, centre.y - 6.dp.toPx()),
-                    size = Size(1.5.dp.toPx(), 10.dp.toPx()),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.dp.toPx()),
+            val flag = Path().apply {
+                moveTo(stemX, stemTop)
+                quadraticTo(
+                    stemX + 5.5.dp.toPx(), stemTop + 1.5.dp.toPx(),
+                    stemX + 3.dp.toPx(), stemTop + 6.dp.toPx(),
                 )
-                drawRoundRect(
-                    color = Color.White,
-                    topLeft = Offset(stemX, centre.y - 6.dp.toPx()),
-                    size = Size(4.dp.toPx(), 1.5.dp.toPx()),
-                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.dp.toPx()),
-                )
+            }
+            drawPath(
+                path = flag,
+                color = Color.White,
+                style = Stroke(width = stemWidth, cap = StrokeCap.Round),
+            )
+
+            rotate(degrees = -20f, pivot = headCentre) {
                 drawOval(
                     color = Color.White,
-                    topLeft = Offset(centre.x - 5.5.dp.toPx(), centre.y + 1.5.dp.toPx()),
-                    size = Size(6.dp.toPx(), 4.5.dp.toPx()),
+                    topLeft = Offset(headCentre.x - headWidth / 2, headCentre.y - headHeight / 2),
+                    size = Size(headWidth, headHeight),
                 )
             }
         }
@@ -256,36 +312,101 @@ private fun BatteryGlyph() {
         drawRoundRect(
             color = Color.White,
             size = Size(bodyWidth, size.height),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(2.5.dp.toPx()),
+            cornerRadius = CornerRadius(2.5.dp.toPx()),
         )
         drawRoundRect(
             color = Color.White,
             topLeft = Offset(bodyWidth + 1.dp.toPx(), size.height / 2 - 2.5.dp.toPx()),
             size = Size(2.5.dp.toPx(), 5.dp.toPx()),
-            cornerRadius = androidx.compose.ui.geometry.CornerRadius(1.dp.toPx()),
+            cornerRadius = CornerRadius(1.dp.toPx()),
         )
     }
 }
 
-/** Tappable without a ripple: the block sits on a wallpaper, and a ripple would smear over it. */
+/**
+ * Tappable without a ripple, since a ripple would smear across the wallpaper.
+ *
+ * The shadow pass passes false: it is the same tree drawn underneath, and it should not collect
+ * touches meant for the block itself.
+ */
 @Composable
-private fun Modifier.tappable(onClick: () -> Unit): Modifier {
+private fun Modifier.tappable(enabled: Boolean, onClick: () -> Unit): Modifier {
+    if (!enabled) return this
     val interactionSource = remember { MutableInteractionSource() }
     return clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
 }
 
-private val BlockShadow = Shadow(
-    color = Color.Black.copy(alpha = 0.5f),
-    offset = Offset(0f, 2f),
-    blurRadius = 14f,
+/** Replaces every colour with black, keeping the alpha, so the pass is a shape and not a copy. */
+private fun Modifier.silhouette(alpha: Float) = graphicsLayer {
+    this.alpha = alpha
+    renderEffect = android.graphics.RenderEffect
+        .createColorFilterEffect(
+            PorterDuffColorFilter(android.graphics.Color.BLACK, PorterDuff.Mode.SRC_IN),
+        )
+        .asComposeRenderEffect()
+}
+
+/** The clock's contribution to the silhouette, relative to everything else. */
+private const val ClockShadowShare = 0.4f
+
+private val ShadowDrop = 3.dp
+private val ShadowBlur = 12.dp
+private const val ShadowAlpha = 0.8f
+
+/** Lighter than the rest: 80sp glyphs carry their own weight against a photo. */
+private val ClockStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.ExtraLight,
+    fontSize = 80.sp,
+    lineHeight = 0.86.em,
+    letterSpacing = (-0.035).em,
+    color = Color.White,
+    shadow = Shadow(
+        color = Color.Black.copy(alpha = 0.3f),
+        offset = Offset(0f, 2f),
+        blurRadius = 16f,
+    ),
 )
 
+/**
+ * The text shadow, on top of the silhouette pass.
+ *
+ * The silhouette is a wide halo; this is the tighter edge that keeps small text crisp against a
+ * busy photo.
+ */
+private val BlockShadow = Shadow(
+    color = Color.Black.copy(alpha = 0.55f),
+    offset = Offset(0f, 3f),
+    blurRadius = 26f,
+)
+
+/** Date and battery. Full white rather than 92%, because they were the hardest line to read. */
 private val CapsStyle = TextStyle(
     fontFamily = Karla,
     fontWeight = FontWeight.Normal,
     fontSize = 13.sp,
     letterSpacing = 0.24.em,
-    color = Color.White.copy(alpha = 0.92f),
+    color = Color.White,
+    shadow = BlockShadow,
+)
+
+/** The caps label shared by the music element when idle and the YouTube link. */
+private val LinkLabelStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.Normal,
+    fontSize = 11.sp,
+    letterSpacing = 0.26.em,
+    color = Color.White,
+    shadow = BlockShadow,
+)
+
+/** Track names keep their own casing and a larger size, since they are content, not a label. */
+private val TrackStyle = TextStyle(
+    fontFamily = Karla,
+    fontWeight = FontWeight.Light,
+    fontSize = 14.sp,
+    letterSpacing = 0.03.em,
+    color = Color.White,
     shadow = BlockShadow,
 )
 
@@ -297,3 +418,6 @@ private val CountStyle = TextStyle(
     color = Color.White,
     shadow = BlockShadow,
 )
+
+private val BadgeIconSize = 24.dp
+private const val MaxBadgeCount = 99

@@ -21,7 +21,14 @@ import kotlinx.coroutines.flow.asStateFlow
  */
 class HarmoniNotificationListener : NotificationListenerService() {
 
-    override fun onListenerConnected() = refresh()
+    override fun onListenerConnected() {
+        NotificationAccess.setConnected(true)
+        refresh()
+    }
+
+    override fun onListenerDisconnected() {
+        NotificationAccess.setConnected(false)
+    }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) = refresh()
 
@@ -47,6 +54,23 @@ object NotificationCounts {
 
     internal fun set(counts: Map<String, Int>) {
         _counts.value = counts
+    }
+}
+
+/**
+ * Whether the listener is bound right now, which is later than the grant itself.
+ *
+ * Reading media sessions needs the service actually bound, not merely enabled in Settings. The
+ * bind lands some time after the process starts, so anything depending on it has to wait for this
+ * rather than try once at startup and give up.
+ */
+object NotificationAccess {
+
+    private val _connected = MutableStateFlow(false)
+    val connected: StateFlow<Boolean> = _connected.asStateFlow()
+
+    internal fun setConnected(connected: Boolean) {
+        _connected.value = connected
     }
 }
 
