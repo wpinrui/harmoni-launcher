@@ -39,7 +39,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     var surface by remember { mutableStateOf(Size.Zero) }
     var rejectCount by remember { mutableIntStateOf(0) }
     var ringCentre by remember { mutableStateOf<Offset?>(null) }
-    var slots by remember { mutableStateOf(RingBindings.slots) }
+    var slots by remember { mutableStateOf(emptyList<RingTarget>()) }
     var ringInteractive by remember { mutableStateOf(true) }
     var searchOpen by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
@@ -48,6 +48,10 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     val contextual = remember(context) { ContextualRing(context) }
     val alphabet by context.harmoni.graffiti.collectAsState()
     val haptics = LocalHapticFeedback.current
+
+    val entries by context.harmoni.appIndex.entries.collectAsState()
+    val overrides by RingSlots.overrides.collectAsState()
+    val fixed = remember(overrides, entries) { ringTargets(overrides, entries) }
 
     // Coming home while the ring or the app list is up means "get me back to the wallpaper".
     LaunchedEffect(Unit) {
@@ -72,7 +76,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                 when (gesture) {
                     is HomeGesture.Tap ->
                         if (RingPlacement.fits(gesture.position, surface, density)) {
-                            slots = RingBindings.slots
+                            slots = fixed
                             // Deaf until the moment a second tap could no longer arrive, so the
                             // surface keeps both halves of a double tap.
                             ringInteractive = false

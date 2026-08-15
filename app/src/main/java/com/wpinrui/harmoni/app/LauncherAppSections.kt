@@ -26,7 +26,6 @@ import com.wpinrui.harmoni.graffiti.GraffitiLetters
 import com.wpinrui.harmoni.graffiti.GraffitiSample
 import com.wpinrui.harmoni.graffiti.GraffitiStore
 import com.wpinrui.harmoni.graffiti.GraffitiStrokeArt
-import com.wpinrui.harmoni.home.RingBindings
 import com.wpinrui.harmoni.home.RingTarget
 import com.wpinrui.harmoni.home.iconPackage
 import java.time.Duration
@@ -37,14 +36,30 @@ import java.time.Duration
  * Position leads the row rather than being implied by order: the ring is muscle memory, and
  * remembering which way is which is usually the reason to open this screen.
  */
-internal fun LazyListScope.ringBindingRows(entries: List<AppEntry>) {
-    itemsIndexed(RingBindings.slots) { index, target ->
+internal fun LazyListScope.ringBindingRows(
+    entries: List<AppEntry>,
+    slots: List<RingTarget>,
+    showInSearch: Boolean,
+    onEdit: (Int) -> Unit,
+    onToggleSearch: (Boolean) -> Unit,
+) {
+    itemsIndexed(slots) { index, target ->
         val installed = entries.any { it.packageName == target.iconPackage }
 
         Row2(
             key = "${Compass[index]}  ${target.label}",
             value = if (installed) describe(target) else "NOT INSTALLED",
             valueColour = if (installed) Muted else Dead,
+            onClick = { onEdit(index) },
+        )
+    }
+
+    item {
+        Row2(
+            key = "Ring apps also in search",
+            value = if (showInSearch) "ON" else "OFF",
+            valueColour = if (showInSearch) Live else Muted,
+            onClick = { onToggleSearch(!showInSearch) },
         )
     }
 }
@@ -54,7 +69,7 @@ private fun describe(target: RingTarget) = when (target) {
     is RingTarget.Web -> target.url
 }
 
-private val Compass = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
+internal val Compass = listOf("N", "NE", "E", "SE", "S", "SW", "W", "NW")
 
 /**
  * Every letter's shape, drawn from the templates actually in use.

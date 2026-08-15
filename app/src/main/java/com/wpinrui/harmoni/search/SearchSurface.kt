@@ -63,6 +63,9 @@ import com.wpinrui.harmoni.apps.AppEntryIcon
 import com.wpinrui.harmoni.diagnostics.Diagnostics
 import com.wpinrui.harmoni.graffiti.isBackspaceStroke
 import com.wpinrui.harmoni.harmoni
+import com.wpinrui.harmoni.home.RingSlots
+import com.wpinrui.harmoni.home.iconPackage
+import com.wpinrui.harmoni.home.ringTargets
 import com.wpinrui.harmoni.ui.theme.Karla
 import kotlin.math.ceil
 import kotlin.math.hypot
@@ -84,7 +87,20 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
     var query by remember { mutableStateOf(initialQuery) }
     var lastLetter by remember { mutableStateOf<Char?>(null) }
 
-    val results = remember(entries, query) { AppMatcher.match(entries, query) }
+    // The ring's eight are one tap away already, so by default they do not also take places in a
+    // grid of eight. The toggle lives on the launcher app screen for when that is not wanted.
+    val overrides by RingSlots.overrides.collectAsState()
+    val showRing by RingSlots.showInSearch.collectAsState()
+    val pool = remember(entries, overrides, showRing) {
+        if (showRing) {
+            entries
+        } else {
+            val onRing = ringTargets(overrides, entries).map { it.iconPackage }.toSet()
+            entries.filterNot { it.packageName in onRing }
+        }
+    }
+
+    val results = remember(pool, query) { AppMatcher.match(pool, query) }
     val pageCount = maxOf(1, ceil(results.size / PerPage.toFloat()).toInt())
     val pager = rememberPagerState(pageCount = { pageCount })
 

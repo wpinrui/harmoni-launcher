@@ -49,6 +49,8 @@ import com.wpinrui.harmoni.context.hasUsageAccess
 import com.wpinrui.harmoni.diagnostics.Diagnostics
 import com.wpinrui.harmoni.graffiti.GraffitiCaptureActivity
 import com.wpinrui.harmoni.harmoni
+import com.wpinrui.harmoni.home.RingSlots
+import com.wpinrui.harmoni.home.ringTargets
 import com.wpinrui.harmoni.search.canReadWallpaper
 import com.wpinrui.harmoni.system.HarmoniNotificationListener
 import com.wpinrui.harmoni.system.NotificationAccess
@@ -72,6 +74,30 @@ fun LauncherAppScreen() {
         open = if (title in open) open - title else open + title
     }
 
+    val overrides by RingSlots.overrides.collectAsState()
+    val showRingInSearch by RingSlots.showInSearch.collectAsState()
+    val slots = remember(overrides, entries) { ringTargets(overrides, entries) }
+    var editing by remember { mutableStateOf<Int?>(null) }
+
+    editing?.let { index ->
+        RingPicker(
+            position = Compass[index],
+            current = slots[index].label,
+            entries = entries,
+            swapped = index in overrides,
+            onPick = { entry ->
+                RingSlots.bind(context, index, entry.packageName)
+                editing = null
+            },
+            onReset = {
+                RingSlots.reset(context, index)
+                editing = null
+            },
+            onDismiss = { editing = null },
+        )
+        return
+    }
+
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -80,7 +106,15 @@ fun LauncherAppScreen() {
     ) {
         item { Masthead() }
 
-        section("RING BINDINGS", open, toggle) { ringBindingRows(entries) }
+        section("RING BINDINGS", open, toggle) {
+            ringBindingRows(
+                entries = entries,
+                slots = slots,
+                showInSearch = showRingInSearch,
+                onEdit = { editing = it },
+                onToggleSearch = { RingSlots.setShowInSearch(context, it) },
+            )
+        }
 
         section("GRAFFITI ALPHABET", open, toggle) {
             item { AlphabetChart() }

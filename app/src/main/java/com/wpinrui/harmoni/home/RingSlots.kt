@@ -1,0 +1,83 @@
+package com.wpinrui.harmoni.home
+
+import android.content.Context
+import androidx.core.content.edit
+import com.wpinrui.harmoni.apps.AppEntry
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
+/**
+ * What is actually on the fixed ring, which is [RingBindings] plus whatever has been swapped.
+ *
+ * The compiled bindings stay the defaults rather than being copied into storage at first run, so a
+ * slot that was never touched still follows the source, and resetting one is a delete rather than
+ * a restore.
+ */
+object RingSlots {
+
+    private const val FILE = "ring"
+    private const val SLOT = "slot_"
+    private const val SHOW_IN_SEARCH = "show_in_search"
+
+    private val _overrides = MutableStateFlow<Map<Int, String>>(emptyMap())
+
+    /** Position to package, for the positions that have been changed. */
+    val overrides: StateFlow<Map<Int, String>> = _overrides.asStateFlow()
+
+    private val _showInSearch = MutableStateFlow(false)
+
+    /**
+     * Whether the ring's apps also appear in search.
+     *
+     * Off by default: an app that is one tap away on the ring does not need to take a place in a
+     * grid of eight, and eight of the most-used apps crowding the first page is most of that page.
+     */
+    val showInSearch: StateFlow<Boolean> = _showInSearch.asStateFlow()
+
+    private fun preferences(context: Context) =
+        context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
+
+    fun load(context: Context) {
+        val preferences = preferences(context)
+
+        _overrides.value = preferences.all
+            .filterKeys { it.startsWith(SLOT) }
+            .mapNotNull { (key, value) ->
+                val index = key.removePrefix(SLOT).toIntOrNull() ?: return@mapNotNull null
+                val packageName = value as? String ?: return@mapNotNull null
+                index to packageName
+            }
+            .toMap()
+
+        _showInSearch.value = preferences.getBoolean(SHOW_IN_SEARCH, false)
+    }
+
+    fun bind(context: Context, index: Int, packageName: String) {
+        preferences(context).edit { putString("$SLOT$index", packageName) }
+        _overrides.value = _overrides.value + (index to packageName)
+    }
+
+    fun reset(context: Context, index: Int) {
+        preferences(context).edit { remove("$SLOT$index") }
+        _overrides.value = _overrides.value - index
+    }
+
+    fun setShowInSearch(context: Context, show: Boolean) {
+        preferences(context).edit { putBoolean(SHOW_IN_SEARCH, show) }
+        _showInSearch.value = show
+    }
+}
+
+/**
+ * The eight, with any swapped position resolved against what is installed.
+ *
+ * Labels come from the index rather than being stored beside the package, so renaming or updating
+ * an app changes what the ring calls it without anything having to be rebound.
+ */
+fun ringTargets(overrides: Map<Int, String>, entries: List<AppEntry>): List<RingTarget> =
+    RingBindings.slots.mapIndexed { index, default ->
+        val packageName = overrides[index] ?: return@mapIndexed default
+        val label = entries.firstOrNull { it.packageName == packageName }?.label ?: packageName
+        RingTarget.App(packageName, label)
+    }
