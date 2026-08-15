@@ -13,8 +13,9 @@ and three gestures on the empty space around it.
 ## Status
 
 Early. Harmoni can be set as the home app and draws the clock block over the wallpaper: time,
-date, battery, notification badges, the music element and the YouTube link. The gestures are not
-built yet, so tapping the empty surface does nothing.
+date, battery, notification badges, the music element and the YouTube link. Touches on the empty
+surface are classified as tap, long press or stroke, and a tap too near an edge flashes and is
+refused. The ring and Graffiti search that those gestures will open do not exist yet.
 
 Badge counts and now-playing text need notification access, granted by hand under Settings,
 Notifications, Device and app notifications.
