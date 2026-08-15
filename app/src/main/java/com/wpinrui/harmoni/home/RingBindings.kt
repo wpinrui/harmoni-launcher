@@ -49,7 +49,7 @@ object RingBindings {
         RingTarget.App("com.anthropic.claude", "Claude"),
         RingTarget.App("com.google.android.GoogleCamera", "Camera"),
         RingTarget.App("com.google.android.apps.photos", "Gallery"),
-        RingTarget.App("sg.trust", "Trust"),
+        RingTarget.App("com.google.android.calendar", "Calendar"),
         RingTarget.App("sg.ndi.sp", "Singpass"),
         RingTarget.App("com.google.android.keep", "Keep"),
     )

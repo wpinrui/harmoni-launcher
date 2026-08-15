@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
     <!--
         Package visibility. Without this the app index would only see apps Harmoni has already
@@ -7,6 +8,20 @@
         exactly the launchable set, which is all the launcher ever shows, so QUERY_ALL_PACKAGES
         is not needed.
     -->
+    <!--
+        Motion, for the contextual ring's transit rules. Runtime permission, asked for on first
+        launch; refused simply leaves motion unknown and those rules idle.
+    -->
+    <uses-permission android:name="android.permission.ACTIVITY_RECOGNITION" />
+
+    <!--
+        Launch history and session lengths, which the pair pulls, the dormancy ramp and the
+        monthly reconciliation all read. Granted by hand in Settings, like notification access.
+    -->
+    <uses-permission
+        android:name="android.permission.PACKAGE_USAGE_STATS"
+        tools:ignore="ProtectedPermissions" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -57,6 +72,11 @@
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
         </service>
+
+        <!-- Activity recognition delivers its results to a broadcast, not a callback. -->
+        <receiver
+            android:name="com.wpinrui.harmoni.context.MotionReceiver"
+            android:exported="false" />
     </application>
 
 </manifest>

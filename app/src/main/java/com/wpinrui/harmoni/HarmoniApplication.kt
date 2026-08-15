@@ -5,6 +5,8 @@ import android.content.Context
 import com.wpinrui.harmoni.apps.AppIndex
 import com.wpinrui.harmoni.apps.IconResolver
 import com.wpinrui.harmoni.apps.SystemIconResolver
+import com.wpinrui.harmoni.context.MotionMonitor
+import com.wpinrui.harmoni.context.UsbConnection
 
 /**
  * Process-level home for the pieces every surface shares.
@@ -21,10 +23,16 @@ class HarmoniApplication : Application() {
     lateinit var iconResolver: IconResolver
         private set
 
+    /** Watched for the whole process, since the contextual ring reads it at the moment of a press. */
+    lateinit var usb: UsbConnection
+        private set
+
     override fun onCreate() {
         super.onCreate()
         appIndex = AppIndex(this).apply { start() }
         iconResolver = SystemIconResolver(this)
+        usb = UsbConnection(this).apply { start() }
+        MotionMonitor.start(this)
     }
 }
 

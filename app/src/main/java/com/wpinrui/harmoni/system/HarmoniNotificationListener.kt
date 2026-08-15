@@ -38,22 +38,33 @@ class HarmoniNotificationListener : NotificationListenerService() {
         // activeNotifications throws if the binding has already gone away, which happens on the
         // way down; an empty map is the honest answer at that point.
         val active = runCatching { activeNotifications }.getOrNull() ?: return
+        val (ongoing, unread) = active.partition { it.isOngoing }
+
         NotificationCounts.set(
-            active.filterNot { it.isOngoing }
-                .groupingBy { it.packageName }
-                .eachCount(),
+            counts = unread.groupingBy { it.packageName }.eachCount(),
+            sticky = ongoing.map { it.packageName }.toSet(),
         )
     }
 }
 
-/** Notification counts by package, published by [HarmoniNotificationListener]. */
+/**
+ * What is currently posted, published by [HarmoniNotificationListener].
+ *
+ * The two are kept apart because they mean different things. A count is unread mail or messages,
+ * which is what the badges show. An ongoing notification is something in progress, a ride or a
+ * download, which the badges ignore and the contextual ring cares about a great deal.
+ */
 object NotificationCounts {
 
     private val _counts = MutableStateFlow<Map<String, Int>>(emptyMap())
     val counts: StateFlow<Map<String, Int>> = _counts.asStateFlow()
 
-    internal fun set(counts: Map<String, Int>) {
+    private val _sticky = MutableStateFlow<Set<String>>(emptySet())
+    val sticky: StateFlow<Set<String>> = _sticky.asStateFlow()
+
+    internal fun set(counts: Map<String, Int>, sticky: Set<String>) {
         _counts.value = counts
+        _sticky.value = sticky
     }
 }
 

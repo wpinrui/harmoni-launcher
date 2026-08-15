@@ -38,6 +38,8 @@ import kotlin.math.sin
 /**
  * The eight app ring, centred on where the finger landed.
  *
+ * The same ring serves Sections 2 and 3: the fixed eight on a tap, a scored eight on a long press.
+ *
  * Two-stage by construction: the tap that summoned it is already spent, so the next tap is the
  * pick. The centre dismisses, and so does anywhere outside an icon, since a ring you cannot get
  * rid of by tapping away would be a trap.
@@ -49,6 +51,7 @@ import kotlin.math.sin
 @Composable
 fun Ring(
     centre: Offset,
+    slots: List<RingTarget>,
     onPick: (RingTarget) -> Unit,
     onDismiss: () -> Unit,
     modifier: Modifier = Modifier,
@@ -63,7 +66,7 @@ fun Ring(
     ) {
         CentreButton(centre = centre, appeared = appeared, onDismiss = onDismiss)
 
-        RingBindings.slots.forEachIndexed { index, target ->
+        slots.forEachIndexed { index, target ->
             val progress by animateFloatAsState(
                 targetValue = if (appeared) 1f else 0f,
                 animationSpec = tween(
