@@ -164,6 +164,12 @@ fun isBackspaceStroke(points: List<Offset>, minimumSpan: Float): Boolean {
     val spanY = points.maxOf { it.y } - points.minOf { it.y }
 
     return spanX >= minimumSpan &&
-        abs(travel) > 0.6f * spanX &&
-        spanY < 0.4f * spanX
+        abs(travel) > NetTravelShare * spanX &&
+        spanY < FlatnessLimit * spanX
 }
+
+/** How much of a backspace's horizontal span has to be net travel rather than doubling back. */
+private const val NetTravelShare = 0.6f
+
+/** How tall a backspace may be, against its width, before it is a letter. */
+private const val FlatnessLimit = 0.4f

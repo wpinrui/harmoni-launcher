@@ -21,6 +21,13 @@ data class ContextSnapshot(
     val sticky: Set<String>,
     /** Already reachable from the home surface, so never worth a ring slot. */
     val excluded: Set<String>,
+    /**
+     * Packages the launcher can actually open.
+     *
+     * Usage stats report every package that has run, most of which have no launcher activity, so
+     * a slot filled from them unchecked draws an empty circle that does nothing when tapped.
+     */
+    val launchable: Set<String>,
 )
 
 /** An app and why it earned its place, kept together so a ring can be explained after the fact. */
@@ -55,6 +62,7 @@ object ContextualScoring {
         val filler = snapshot.lastUsed.entries
             .sortedByDescending { it.value }
             .map { it.key }
+            .filter { it in snapshot.launchable }
             .filterNot { it in snapshot.excluded || it in scored }
 
         return (scored + filler).take(size)
@@ -62,8 +70,12 @@ object ContextualScoring {
 
     /** Every candidate with a non-zero score, for the ring and for explaining it. */
     fun score(snapshot: ContextSnapshot): List<ScoredApp> {
+        // Filtered against what the launcher can open, not just the filler below: a sticky
+        // notification promotes any package that posts one, and a screen recording or a system
+        // download would otherwise take a slot and draw an empty circle.
         val candidates = (ContextApps.all + snapshot.sticky + snapshot.notified)
             .toSet()
+            .filter { it in snapshot.launchable }
             .filterNot { it in snapshot.excluded }
 
         return candidates.mapNotNull { packageName ->
@@ -97,8 +109,12 @@ object ContextualScoring {
         ContextualRules.pulls
             .filter { it.target == packageName }
             .mapNotNull { pull ->
+                // Measured from when the visit ended, not when it began. A long visit is one
+                // session whose start can be well outside the window while the user has only
+                // just put the app down.
                 val launched = snapshot.sessions.any {
-                    it.packageName == pull.source && it.start.isWithin(pull.window, snapshot.now)
+                    it.packageName == pull.source &&
+                        it.start.plus(it.duration).isWithin(pull.window, snapshot.now)
                 }
                 if (launched) "pull from ${pull.source.short()}" to pull.weight else null
             }

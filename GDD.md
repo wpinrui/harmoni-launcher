@@ -212,8 +212,9 @@ anything else.
 
 Swipe down in the upper half opens the notification shade. Android has no supported way for an app
 to do this other than an accessibility service, so Harmoni ships one whose entire capability is
-that single global action: it takes no events and cannot read screen content. The undocumented
-`StatusBarManager` route is tried first, so the gesture may work before the grant.
+that single global action: it takes no events and cannot read screen content. That service is
+used whenever it is bound, and the undocumented `StatusBarManager` route is the fallback, so the
+gesture may work before the grant.
 
 ---
 
@@ -235,7 +236,8 @@ you already are.
 - Diagnostics
 - Build info, version, build date, commit
 
-The first four sections listed are open when the screen appears; the rest are reference and start
+Ring bindings, the alphabet chart, permission health and attributions are open when the screen
+appears. Gesture shortcuts, hidden apps, the contextual rules, diagnostics and build info start
 collapsed.
 
 **Hidden apps**
@@ -269,5 +271,5 @@ an input the launcher accepted and the user then undid.
 - Letters erased immediately after being drawn, grouped by letter, which is the shape to redraw
 - Ring summons dismissed without a pick
 
-Taps refused near an edge were counted until Section 2 stopped refusing them. The counter remains
-and no longer moves.
+Taps refused near an edge were counted until Section 2 stopped refusing them. That counter is
+gone.

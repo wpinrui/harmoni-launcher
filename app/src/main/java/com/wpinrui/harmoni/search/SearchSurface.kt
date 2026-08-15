@@ -11,9 +11,6 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -36,10 +33,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
@@ -51,7 +46,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -68,21 +62,28 @@ import com.wpinrui.harmoni.apps.AppEntryIcon
 import com.wpinrui.harmoni.apps.HiddenApps
 import com.wpinrui.harmoni.apps.visible
 import com.wpinrui.harmoni.diagnostics.Diagnostics
+import com.wpinrui.harmoni.graffiti.captureStroke
 import com.wpinrui.harmoni.graffiti.isBackspaceStroke
+import com.wpinrui.harmoni.graffiti.strokeSpan
 import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.home.RingSlots
 import com.wpinrui.harmoni.home.iconPackage
 import com.wpinrui.harmoni.home.ringTargets
+import com.wpinrui.harmoni.ui.theme.Ground
+import com.wpinrui.harmoni.ui.theme.Meta
 import com.wpinrui.harmoni.ui.theme.Karla
+import com.wpinrui.harmoni.ui.theme.noRipple
 import kotlin.math.ceil
-import kotlin.math.hypot
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * The search view from Section 4, over the home surface.
  *
  * Opens on the first stroke, carrying whatever letter that stroke was, or on a double tap with
- * nothing typed at all, which makes it the all apps screen: the query is empty and every installed
- * app matches.
+ * nothing typed at all, which makes it the all apps screen: the query is empty and everything the
+ * launcher offers matches. Hidden apps never appear, and nor do the fixed ring's eight unless the
+ * toggle on the launcher app screen says otherwise.
  *
  * Everything after that is drawn in the input area below the grid. There is no keyboard.
  */
@@ -135,7 +136,7 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
             .fillMaxSize()
             .alpha(entrance)
             // Anywhere that is not the grid, the query or the input area closes the view.
-            .noRipple(onClose),
+            .noRipple(onClick = onClose),
     ) {
         // Blur under tint, both fading with the entrance, as the design's backdrop filter does.
         BlurredWallpaper(radius = BlurRadius * entrance)
@@ -175,7 +176,6 @@ fun SearchSurface(initialQuery: String, onLaunch: (AppEntry) -> Unit, onClose: (
                     lastLetter = null
                     query = query.dropLast(1)
                 },
-                onTap = onClose,
                 recognise = { alphabet.recognise(it)?.letter },
             )
         }
@@ -326,19 +326,17 @@ private fun PageDots(pageCount: Int, current: Int) {
  * The stroke stays on screen and fades once the finger lifts, so a letter that was misread can be
  * seen for what it actually looked like rather than guessed at.
  *
- * A touch that goes nowhere is a tap, not a letter, and closes the view like anywhere else outside
- * the grid. Between that and a real letter is a band where nothing happens at all, so a letter
- * drawn too small is ignored rather than dismissing everything.
+ * A touch too small to be a letter does nothing. This is the writing area, so closing the view out
+ * from under a letter that came out short would be its own bug, and it is the one part of the
+ * screen where tapping away does not dismiss.
  */
 @Composable
 private fun ColumnScope.GraffitiInput(
     onLetter: (Char) -> Unit,
     onBackspace: () -> Unit,
-    onTap: () -> Unit,
     recognise: (List<Offset>) -> Char?,
 ) {
     val density = LocalDensity.current
-    val tapSpan = with(density) { TapSpan.toPx() }
     val letterSpan = with(density) { LetterSpan.toPx() }
     val backspaceSpan = with(density) { BackspaceSpan.toPx() }
 
@@ -360,39 +358,24 @@ private fun ColumnScope.GraffitiInput(
             .weight(1f)
             .fillMaxWidth()
             .padding(top = 14.dp)
-            .pointerInput(Unit) {
-                awaitEachGesture {
-                    val down = awaitFirstDown()
-                    down.consume()
+            .captureStroke(
+                key = Unit,
+                onProgress = {
+                    live = it
                     drawing = true
-
-                    val points = mutableListOf(down.position)
-                    live = points.toList()
-
-                    while (true) {
-                        val event = awaitPointerEvent()
-                        val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                        // Historical points arrive between frames, so the path is as dense as the
-                        // digitiser reports rather than as dense as the display refreshes.
-                        change.historical.forEach { points += it.position }
-                        points += change.position
-                        change.consume()
-                        live = points.toList()
-                        if (!change.pressed) break
-                    }
-
+                },
+                onStroke = { points ->
                     drawing = false
 
                     // A tap in here does nothing. This is the writing area, and closing the view
                     // out from under a letter that came out too small would be its own bug.
-                    val span = spanOf(points)
                     when {
-                        span < letterSpan -> Unit
+                        strokeSpan(points) < letterSpan -> Unit
                         isBackspaceStroke(points, backspaceSpan) -> onBackspace()
-                        else -> recognise(points.toList())?.let(onLetter)
+                        else -> recognise(points)?.let(onLetter)
                     }
-                }
-            },
+                },
+            ),
     ) {
         Box(
             modifier = Modifier
@@ -417,20 +400,6 @@ private fun ColumnScope.GraffitiInput(
     }
 }
 
-/** The diagonal of the stroke's bounding box, which is how far the finger actually got. */
-private fun spanOf(points: List<Offset>): Float {
-    if (points.size < 2) return 0f
-    val width = points.maxOf { it.x } - points.minOf { it.x }
-    val height = points.maxOf { it.y } - points.minOf { it.y }
-    return hypot(width, height)
-}
-
-@Composable
-private fun Modifier.noRipple(onClick: () -> Unit): Modifier {
-    val interactionSource = remember { MutableInteractionSource() }
-    return clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-}
-
 /** The wallpaper, blurred, as the backdrop the tint sits on. */
 @Composable
 private fun BlurredWallpaper(radius: Dp) {
@@ -448,7 +417,7 @@ private fun BlurredWallpaper(radius: Dp) {
     }
 }
 
-private val Tint = Color(0xFF120E0C).copy(alpha = 0.72f)
+private val Tint = Ground.copy(alpha = 0.72f)
 private val IconShape = RoundedCornerShape(26)
 
 private val QueryStyle = TextStyle(
@@ -464,7 +433,7 @@ private val MetaStyle = TextStyle(
     fontWeight = FontWeight.Normal,
     fontSize = 13.sp,
     letterSpacing = 0.12.em,
-    color = Color(0xFFCFC6BD),
+    color = Meta,
 )
 
 private const val Columns = 4
@@ -475,7 +444,6 @@ private const val EntranceMillis = 500
 
 private val BlurRadius = 14.dp
 
-private val TapSpan = 12.dp
 private val LetterSpan = 24.dp
 private val BackspaceSpan = 56.dp
 private val TrailWidth = 4.dp

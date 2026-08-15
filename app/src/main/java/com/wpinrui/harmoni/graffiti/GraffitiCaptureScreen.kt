@@ -3,10 +3,6 @@ package com.wpinrui.harmoni.graffiti
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.gestures.awaitEachGesture
-import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -21,21 +17,16 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
@@ -44,12 +35,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
+import com.wpinrui.harmoni.ui.theme.Ground
 import com.wpinrui.harmoni.ui.theme.Karla
+import com.wpinrui.harmoni.ui.theme.noRipple
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
-import kotlin.math.hypot
-import kotlin.math.min
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
 
 /**
  * Records the Graffiti alphabet, one letter at a time.
@@ -137,9 +130,13 @@ fun GraffitiCaptureScreen() {
             enabled = !full,
             minimumSpan = with(density) { MinimumSpan.toPx() },
             onStroke = { points ->
-                samples = samples + GraffitiSample(letter, points)
+                val next = samples + GraffitiSample(letter, points)
+                samples = next
                 revision++
-                if (forLetter.size + 1 >= SamplesPerLetter) advanceAfter = letter
+                // Counted from the list being written, not from `forLetter`. The pointer input is
+                // keyed on the letter, so the lambda captures whatever `forLetter` held when the
+                // letter changed and never sees a sample added since.
+                if (next.count { it.letter == letter } >= SamplesPerLetter) advanceAfter = letter
             },
             modifier = Modifier
                 .weight(1f)
@@ -295,28 +292,16 @@ private fun DrawArea(
             .background(Canvas0)
             .border(1.dp, Color.White.copy(alpha = 0.10f), RoundedCornerShape(18.dp))
             .then(
-                if (!enabled) Modifier else Modifier.pointerInput(letter) {
-                    awaitEachGesture {
-                        val down = awaitFirstDown()
-                        down.consume()
-
-                        val points = mutableListOf(down.position)
-                        live = points.toList()
-
-                        while (true) {
-                            val event = awaitPointerEvent()
-                            val change = event.changes.firstOrNull { it.id == down.id } ?: break
-                            // Historical points arrive between frames, so the path is as dense as
-                            // the digitiser reports rather than as dense as the display refreshes.
-                            change.historical.forEach { points += it.position }
-                            points += change.position
-                            change.consume()
-                            live = points.toList()
-                            if (!change.pressed) break
-                        }
-
-                        if (isStroke(points, minimumSpan)) onStroke(points.toList()) else live = emptyList()
-                    }
+                if (!enabled) {
+                    Modifier
+                } else {
+                    Modifier.captureStroke(
+                        key = letter,
+                        onProgress = { live = it },
+                        onStroke = { points ->
+                            if (isStroke(points, minimumSpan)) onStroke(points) else live = emptyList()
+                        },
+                    )
                 },
             ),
         contentAlignment = Alignment.Center,
@@ -370,22 +355,10 @@ private fun Footer(total: Int, path: String) {
  * Both tests are needed: a slow tap produces plenty of points across a couple of pixels, and a
  * fast flick produces a long path out of four.
  */
-private fun isStroke(points: List<Offset>, minimumSpan: Float): Boolean {
-    if (points.size < MinimumPoints) return false
+private fun isStroke(points: List<Offset>, minimumSpan: Float): Boolean =
+    points.size >= MinimumPoints && strokeSpan(points) >= minimumSpan
 
-    val width = points.maxOf { it.x } - points.minOf { it.x }
-    val height = points.maxOf { it.y } - points.minOf { it.y }
-    return hypot(width, height) >= minimumSpan
-}
-
-@Composable
-private fun Modifier.noRipple(enabled: Boolean, onClick: () -> Unit): Modifier {
-    if (!enabled) return this
-    val interactionSource = remember { MutableInteractionSource() }
-    return clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
-}
-
-private val Background = Color(0xFF120E0C)
+private val Background = Ground
 private val Canvas0 = Color(0xFF1D1815)
 private val SlotEmpty = Color(0xFF171310)
 private val SlotFilled = Color(0xFF221C18)

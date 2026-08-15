@@ -22,8 +22,8 @@ import com.wpinrui.harmoni.ui.theme.HarmoniTheme
 /**
  * The home surface, registered for CATEGORY_HOME.
  *
- * Nothing is drawn here yet beyond the wallpaper showing through. Section 1's clock block and
- * Section 3's gesture layer both attach to [HomeSurface].
+ * The wallpaper shows through the window and everything else is drawn by [HomeSurface]: the clock
+ * block, both rings, and the search view.
  */
 class HomeActivity : ComponentActivity() {
 

@@ -2,17 +2,14 @@ package com.wpinrui.harmoni.search
 
 import android.app.WallpaperManager
 import android.content.Context
-import android.content.Intent
 import android.graphics.Bitmap
 import android.os.Environment
-import android.provider.Settings
 import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
-import androidx.core.net.toUri
 import androidx.core.graphics.drawable.toBitmap
 import androidx.core.graphics.scale
 import kotlinx.coroutines.Dispatchers
@@ -53,16 +50,6 @@ object WallpaperCache {
 }
 
 fun Context.canReadWallpaper(): Boolean = Environment.isExternalStorageManager()
-
-/** Takes the user to the all-files toggle, which is a Settings screen rather than a prompt. */
-fun Context.requestWallpaperAccess() {
-    startActivity(
-        Intent(
-            Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION,
-            "package:$packageName".toUri(),
-        ),
-    )
-}
 
 private fun Context.readWallpaper(): ImageBitmap? {
     if (!canReadWallpaper()) {

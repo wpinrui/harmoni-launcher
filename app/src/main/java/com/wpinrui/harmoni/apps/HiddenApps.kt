@@ -3,6 +3,7 @@ package com.wpinrui.harmoni.apps
 import android.content.Context
 import androidx.core.content.edit
 import com.wpinrui.harmoni.app.SettingsRestart
+import com.wpinrui.harmoni.settings.preferences
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -17,24 +18,20 @@ import kotlinx.coroutines.flow.asStateFlow
 object HiddenApps {
 
     private const val FILE = "hidden_apps"
+
     private const val KEY = "packages"
 
     private val _packages = MutableStateFlow<Set<String>>(emptySet())
     val packages: StateFlow<Set<String>> = _packages.asStateFlow()
 
-    private fun preferences(context: Context) =
-        context.applicationContext.getSharedPreferences(FILE, Context.MODE_PRIVATE)
-
     fun load(context: Context) {
-        _packages.value = preferences(context).getStringSet(KEY, emptySet()).orEmpty()
+        _packages.value = context.preferences(FILE).getStringSet(KEY, emptySet()).orEmpty()
     }
-
-    fun isHidden(packageName: String) = packageName in _packages.value
 
     /** Written on every change, since the screen has no save button and is not meant to need one. */
     fun set(context: Context, packageName: String, hidden: Boolean) {
         val next = if (hidden) _packages.value + packageName else _packages.value - packageName
-        preferences(context).edit { putStringSet(KEY, next) }
+        context.preferences(FILE).edit { putStringSet(KEY, next) }
         _packages.value = next
         SettingsRestart.mark()
     }

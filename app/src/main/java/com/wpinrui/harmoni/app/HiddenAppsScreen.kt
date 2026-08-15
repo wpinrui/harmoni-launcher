@@ -14,7 +14,6 @@ import androidx.compose.material3.CheckboxDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,6 +24,9 @@ import com.wpinrui.harmoni.apps.AppEntryIcon
 import com.wpinrui.harmoni.apps.HiddenApps
 import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.home.RingSlots
+import com.wpinrui.harmoni.ui.theme.Accent
+import com.wpinrui.harmoni.ui.theme.Ground
+import androidx.compose.runtime.getValue
 
 /**
  * Which apps Harmoni pretends are not installed.
@@ -39,7 +41,7 @@ fun HiddenAppsScreen() {
     val hidden by HiddenApps.packages.collectAsState()
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Background),
+        modifier = Modifier.fillMaxSize().background(Ground),
         contentPadding = PaddingValues(start = 22.dp, end = 22.dp, top = 64.dp, bottom = 72.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -78,7 +80,7 @@ private fun HiddenRow(entry: AppEntry, hidden: Boolean, onToggle: (Boolean) -> U
                 onCheckedChange = onToggle,
                 colors = CheckboxDefaults.colors(
                     checkedColor = Accent,
-                    checkmarkColor = Background,
+                    checkmarkColor = Ground,
                     uncheckedColor = Color.White.copy(alpha = 0.30f),
                 ),
             )

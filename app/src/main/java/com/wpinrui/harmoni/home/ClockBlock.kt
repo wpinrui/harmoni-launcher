@@ -7,8 +7,6 @@ import android.provider.AlarmClock
 import android.provider.CalendarContract
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,7 +20,6 @@ import androidx.compose.foundation.layout.widthIn
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -41,6 +38,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLocale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -56,9 +54,9 @@ import com.wpinrui.harmoni.system.rememberClock
 import com.wpinrui.harmoni.system.rememberIs24Hour
 import com.wpinrui.harmoni.system.rememberNowPlaying
 import com.wpinrui.harmoni.ui.theme.Karla
+import com.wpinrui.harmoni.ui.theme.noRipple
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
-import java.util.Locale
 
 /**
  * The one composed block on the home surface: clock, date, battery, notification badges, the
@@ -124,10 +122,14 @@ private fun BlockContent(
 
 @Composable
 private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
-    val timeFormat = remember(state.is24Hour) {
-        DateTimeFormatter.ofPattern(if (state.is24Hour) "H:mm" else "h:mm", Locale.getDefault())
+    // Read from the composition rather than from Locale.getDefault(), which is not observable:
+    // changing the system language would otherwise leave the date in the old one until something
+    // else forced a recomposition.
+    val locale = LocalLocale.current.platformLocale
+    val timeFormat = remember(state.is24Hour, locale) {
+        DateTimeFormatter.ofPattern(if (state.is24Hour) "H:mm" else "h:mm", locale)
     }
-    val dateFormat = remember { DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()) }
+    val dateFormat = remember(locale) { DateTimeFormatter.ofPattern("EEE d MMM", locale) }
 
     val context = LocalContext.current
 
@@ -143,14 +145,14 @@ private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
                 // At 80sp the same shadow that makes 11sp legible reads as a smear, so the
                 // clock's share of the silhouette is dialled back.
                 .alpha(if (shadowPass) ClockShadowShare else 1f)
-                .tappable(!shadowPass) { context.launchOrLog(clockIntent(), "the clock") },
+                .noRipple(enabled = !shadowPass) { context.launchOrLog(clockIntent(), "the clock") },
             style = ClockStyle,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
-                text = state.time.format(dateFormat).uppercase(Locale.getDefault()),
-                modifier = Modifier.tappable(!shadowPass) {
+                text = state.time.format(dateFormat).uppercase(locale),
+                modifier = Modifier.noRipple(enabled = !shadowPass) {
                     context.launchOrLog(calendarIntent(), "the calendar")
                 },
                 style = CapsStyle,
@@ -158,7 +160,7 @@ private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
             Row(
                 modifier = Modifier
                     .padding(top = 11.dp)
-                    .tappable(!shadowPass) { context.launchOrLog(batteryIntent(), "battery settings") },
+                    .noRipple(enabled = !shadowPass) { context.launchOrLog(batteryIntent(), "battery settings") },
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -196,7 +198,7 @@ private fun Badges(counts: Map<String, Int>, shadowPass: Boolean) {
 
             Row(
                 modifier = Modifier
-                    .tappable(!shadowPass) { context.launchApp(badge.packageName) }
+                    .noRipple(enabled = !shadowPass) { context.launchApp(badge.packageName) }
                     .padding(vertical = 11.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -234,7 +236,7 @@ private fun MusicAndLink(nowPlaying: NowPlaying?, shadowPass: Boolean) {
     Column(modifier = Modifier.offset(y = (-9).dp)) {
         Row(
             modifier = Modifier
-                .tappable(!shadowPass) { context.launchApp(HomeBindings.YOUTUBE_MUSIC) }
+                .noRipple(enabled = !shadowPass) { context.launchApp(HomeBindings.YOUTUBE_MUSIC) }
                 .padding(vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -253,7 +255,7 @@ private fun MusicAndLink(nowPlaying: NowPlaying?, shadowPass: Boolean) {
 
         Row(
             modifier = Modifier
-                .tappable(!shadowPass) { context.launchApp(HomeBindings.YOUTUBE) }
+                .noRipple(enabled = !shadowPass) { context.launchApp(HomeBindings.YOUTUBE) }
                 .padding(vertical = 9.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -349,19 +351,6 @@ private fun BatteryGlyph() {
             cornerRadius = CornerRadius(1.dp.toPx()),
         )
     }
-}
-
-/**
- * Tappable without a ripple, since a ripple would smear across the wallpaper.
- *
- * The shadow pass passes false: it is the same tree drawn underneath, and it should not collect
- * touches meant for the block itself.
- */
-@Composable
-private fun Modifier.tappable(enabled: Boolean, onClick: () -> Unit): Modifier {
-    if (!enabled) return this
-    val interactionSource = remember { MutableInteractionSource() }
-    return clickable(interactionSource = interactionSource, indication = null, onClick = onClick)
 }
 
 /** Replaces every colour with black, keeping the alpha, so the pass is a shape and not a copy. */

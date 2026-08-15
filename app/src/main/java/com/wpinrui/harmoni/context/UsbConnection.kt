@@ -31,11 +31,6 @@ class UsbConnection(private val context: Context) {
         dataConnected = read()
     }
 
-    fun stop() {
-        receiver?.let(context::unregisterReceiver)
-        receiver = null
-    }
-
     private fun read(): Boolean =
         context.registerReceiver(null, IntentFilter(ACTION_USB_STATE))?.isDataConnection() == true
 

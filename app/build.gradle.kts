@@ -59,6 +59,13 @@ android {
 }
 
 dependencies {
+    // Pulled in transitively at 1.1.0, which predates the ActivityResult APIs the activity
+    // library uses. Nothing here uses fragments, but an old one on the classpath is a hazard for
+    // anything that later does, and it is what lint flags.
+    constraints {
+        implementation(libs.androidx.fragment)
+    }
+
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
     implementation(libs.androidx.lifecycle.runtime.compose)

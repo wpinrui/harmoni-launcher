@@ -6,6 +6,8 @@ import android.util.Log
 import androidx.annotation.DrawableRes
 import androidx.core.net.toUri
 import com.wpinrui.harmoni.R
+import com.wpinrui.harmoni.context.ContextApps
+import com.wpinrui.harmoni.harmoni
 
 /**
  * What sits on a ring position.
@@ -49,7 +51,7 @@ object RingBindings {
         RingTarget.App("com.anthropic.claude", "Claude"),
         RingTarget.App("com.google.android.GoogleCamera", "Camera"),
         RingTarget.App("com.google.android.apps.photos", "Gallery"),
-        RingTarget.App("com.google.android.calendar", "Calendar"),
+        RingTarget.App(ContextApps.CALENDAR, "Calendar"),
         RingTarget.App("sg.ndi.sp", "Singpass"),
         RingTarget.App("com.google.android.keep", "Keep"),
     )
@@ -58,7 +60,12 @@ object RingBindings {
 /** Opens a ring slot. Does nothing if the app behind it is gone. */
 fun Context.launch(target: RingTarget) {
     when (target) {
-        is RingTarget.App -> launchApp(target.packageName)
+        // Resolved through the index so a work-profile app launches in its own profile. Falls
+        // back to the package for anything the index has not seen.
+        is RingTarget.App ->
+            harmoni.appIndex.firstFor(target.packageName)
+                ?.let { launch(it) }
+                ?: launchApp(target.packageName)
 
         is RingTarget.Web -> {
             val intent = Intent(Intent.ACTION_VIEW, target.url.toUri())

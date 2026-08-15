@@ -1,8 +1,6 @@
 package com.wpinrui.harmoni.system
 
 import android.accessibilityservice.AccessibilityService
-import android.content.Context
-import android.provider.Settings
 import android.view.accessibility.AccessibilityEvent
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -51,10 +49,3 @@ class HarmoniAccessibilityService : AccessibilityService() {
     }
 }
 
-/** Whether the service has been enabled by hand in Settings, which is not the same as bound. */
-fun Context.hasAccessibilityAccess(): Boolean {
-    val enabled = Settings.Secure.getString(contentResolver, ENABLED_ACCESSIBILITY_SERVICES).orEmpty()
-    return enabled.split(':').any { it.substringBefore('/') == packageName }
-}
-
-private const val ENABLED_ACCESSIBILITY_SERVICES = "enabled_accessibility_services"

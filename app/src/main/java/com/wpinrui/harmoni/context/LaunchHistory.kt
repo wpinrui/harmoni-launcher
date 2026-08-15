@@ -62,8 +62,34 @@ class LaunchHistory(private val context: Context) {
             )
         }
 
-        return sessions.sortedByDescending { it.start }
+        return merged(sessions).sortedByDescending { it.start }
     }
+
+    /**
+     * Joins the fragments of one visit back together.
+     *
+     * Moving between an app's own activities produces a PAUSED and then a RESUMED, so a single
+     * visit arrives here in pieces. The rules that ask how long a visit lasted, the Trust branch
+     * above all, would read a five-minute payment as several short ones and take the wrong
+     * branch.
+     */
+    private fun merged(sessions: List<AppSession>): List<AppSession> =
+        sessions.groupBy { it.packageName }.values.flatMap { forApp ->
+            forApp.sortedBy { it.start }.fold(mutableListOf<AppSession>()) { joined, session ->
+                val previous = joined.lastOrNull()
+                val gap = previous?.let { Duration.between(it.start + it.duration, session.start) }
+
+                if (previous != null && gap != null && gap <= SAME_VISIT_GAP) {
+                    joined[joined.lastIndex] = previous.copy(
+                        duration = Duration.between(previous.start, session.start + session.duration),
+                    )
+                } else {
+                    joined += session
+                }
+
+                joined
+            }
+        }
 
     /** When each app was last used, going back [HISTORY_WINDOW]. */
     fun lastUsed(now: Instant): Map<String, Instant> {
@@ -74,6 +100,9 @@ class LaunchHistory(private val context: Context) {
     }
 
     companion object {
+        /** Long enough to cover an activity handover, short enough not to join two visits. */
+        private val SAME_VISIT_GAP: Duration = Duration.ofSeconds(5)
+
         /** Comfortably past the longest pull window, which is transit at 30 minutes. */
         private val RECENT_WINDOW: Duration = Duration.ofHours(2)
 

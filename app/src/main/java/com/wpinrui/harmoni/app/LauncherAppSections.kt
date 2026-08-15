@@ -12,14 +12,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
@@ -28,13 +27,18 @@ import com.wpinrui.harmoni.apps.AppEntry
 import com.wpinrui.harmoni.apps.AppIcon
 import com.wpinrui.harmoni.context.ContextApps
 import com.wpinrui.harmoni.context.ContextualRules
+import com.wpinrui.harmoni.context.MotionState
 import com.wpinrui.harmoni.graffiti.GraffitiLetters
 import com.wpinrui.harmoni.graffiti.GraffitiSample
 import com.wpinrui.harmoni.graffiti.GraffitiStore
 import com.wpinrui.harmoni.graffiti.GraffitiStrokeArt
 import com.wpinrui.harmoni.home.RingTarget
 import com.wpinrui.harmoni.home.iconPackage
+import com.wpinrui.harmoni.shortcuts.BoundShortcut
+import com.wpinrui.harmoni.shortcuts.ShortcutGesture
+import com.wpinrui.harmoni.ui.theme.Accent
 import java.time.Duration
+import androidx.compose.runtime.getValue
 
 /**
  * The eight fixed positions, in the order the ring lays them out.
@@ -88,6 +92,29 @@ internal fun LazyListScope.ringBindingRows(
                     text = if (showInSearch) "ON" else "OFF",
                     style = ValueStyle.copy(color = if (showInSearch) Accent else NoteStyle.color),
                 )
+            }
+        }
+    }
+}
+
+/** What each swipe up runs, and a way to change it. */
+internal fun LazyListScope.gestureShortcutRows(
+    bindings: Map<ShortcutGesture, BoundShortcut>,
+    onBind: (ShortcutGesture) -> Unit,
+) {
+    items(ShortcutGesture.entries.toList()) { gesture ->
+        val bound = bindings[gesture]
+
+        Panel(onClick = { onBind(gesture) }) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(text = gesture.label, style = ValueStyle)
+                    Text(
+                        text = bound?.let { "${it.appLabel}, ${it.label}" } ?: "Nothing bound",
+                        style = NoteStyle,
+                    )
+                }
+                Text(text = "BIND", style = ValueStyle.copy(color = Accent))
             }
         }
     }
@@ -182,91 +209,134 @@ internal fun LazyListScope.contextualRuleRows(entries: List<AppEntry>) {
         entries.firstOrNull { it.packageName == packageName }?.label ?: packageName
     }
 
-    item {
-        Panel {
-            Text(text = "PULLS", style = HeaderStyle, modifier = Modifier.padding(bottom = 6.dp))
-            ContextualRules.pulls.forEach { pull ->
-                Row(
-                    modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                ) {
-                    Text(
-                        text = if (pull.source == pull.target) {
-                            "${name(pull.source)}, itself"
-                        } else {
-                            "${name(pull.source)} to ${name(pull.target)}"
-                        },
-                        style = BodyStyle,
-                        modifier = Modifier.weight(1f),
-                    )
-                    Text(text = signed(pull.weight), style = ValueStyle.copy(color = weightColour(pull.weight)))
-                    Text(text = short(pull.window), style = NoteStyle, modifier = Modifier.width(38.dp))
-                }
+    pullRows(name)
+    trustRows(name)
+    baselineRows(name)
+    rampRows(name)
+    reconciliationRows(name)
+    notificationRows(name)
+}
+
+private fun LazyListScope.pullRows(name: (String) -> String) {
+    item { Subheading("PULLS") }
+    items(ContextualRules.pulls) { pull ->
+        KeyValueWeightedRow(
+            key = if (pull.source == pull.target) {
+                "${name(pull.source)}, itself"
+            } else {
+                "${name(pull.source)} to ${name(pull.target)}"
+            },
+            weight = pull.weight,
+            trailing = short(pull.window),
+        )
+    }
+}
+
+private fun LazyListScope.trustRows(name: (String) -> String) {
+    item { Subheading("TRUST, SPLIT AT ${short(ContextualRules.TrustShortVisit)}") }
+    items(ContextualRules.trustShortPulls.toList()) { (target, weight) ->
+        KeyValueWeighted("Short visit, ${name(target)}", weight)
+    }
+    items(ContextualRules.trustLongPulls.toList()) { (target, weight) ->
+        KeyValueWeighted("Long visit, ${name(target)}", weight)
+    }
+}
+
+/**
+ * Read through the rules rather than retyped. This panel exists to report them, and a copy of the
+ * numbers would let it go on reporting the old ones after a change.
+ */
+private fun LazyListScope.baselineRows(name: (String) -> String) {
+    item { Subheading("BASELINES AND MOTION") }
+
+    items(listOf(ContextApps.PAYLAH, ContextApps.TRUST, ContextApps.WALLET)) { app ->
+        val outside = ContextualRules.baseline(app, MotionState.STILL)
+        val driving = ContextualRules.baseline(app, MotionState.IN_VEHICLE)
+
+        if (outside == driving) {
+            KeyValueWeighted("${name(app)}, always", outside)
+        } else {
+            Column {
+                KeyValueWeighted("${name(app)}, not in a vehicle", outside)
+                KeyValueWeighted("${name(app)}, in a vehicle", driving)
             }
         }
     }
 
     item {
-        Panel {
-            Text(
-                text = "TRUST, SPLIT AT ${short(ContextualRules.TrustShortVisit)}",
-                style = HeaderStyle,
-                modifier = Modifier.padding(bottom = 6.dp),
-            )
-            ContextualRules.trustShortPulls.forEach { (target, weight) ->
-                KeyValueWeighted("Short visit, ${name(target)}", weight)
-            }
-            ContextualRules.trustLongPulls.forEach { (target, weight) ->
-                KeyValueWeighted("Long visit, ${name(target)}", weight)
-            }
+        KeyValueWeighted(
+            "Transit apps, walking",
+            ContextualRules.motionBoost(ContextApps.MAPS, MotionState.WALKING),
+        )
+    }
+    item {
+        KeyValueWeighted(
+            "${name(ContextApps.MAPS)}, in a vehicle",
+            ContextualRules.motionBoost(ContextApps.MAPS, MotionState.IN_VEHICLE),
+        )
+    }
+    item {
+        KeyValueWeighted(
+            "Other transit apps, in a vehicle",
+            ContextualRules.motionBoost(ContextApps.GRAB, MotionState.IN_VEHICLE),
+        )
+    }
+}
+
+private fun LazyListScope.rampRows(name: (String) -> String) {
+    item { Subheading("DORMANCY RAMPS") }
+    items(ContextualRules.ramps) { ramp ->
+        Column {
+            KeyValueWeighted("${name(ramp.packageName)}, before day ${ramp.startDay}", ramp.floor)
+            KeyValueWeighted("${name(ramp.packageName)}, from day ${ramp.peakDay}", ramp.peakScore)
         }
     }
+}
 
-    item {
-        Panel {
-            Text(
-                text = "BASELINES AND MOTION",
-                style = HeaderStyle,
-                modifier = Modifier.padding(bottom = 6.dp),
-            )
-            KeyValueWeighted("${name(ContextApps.PAYLAH)}, still", 55)
-            KeyValueWeighted("${name(ContextApps.TRUST)}, still", 35)
-            KeyValueWeighted("${name(ContextApps.WALLET)}, always", 20)
-            KeyValueWeighted("Transit apps, walking", 10)
-            KeyValueWeighted("${name(ContextApps.MAPS)}, in a vehicle", 45)
-            KeyValueWeighted("Other transit apps, in a vehicle", 40)
-        }
+private fun LazyListScope.reconciliationRows(name: (String) -> String) {
+    item { Subheading("RECONCILIATION, FROM DAY ${ContextualRules.ReconciliationDay}") }
+    items(ContextualRules.reconciliation.toList()) { (target, weight) ->
+        KeyValueWeighted(name(target), weight)
     }
+}
 
+private fun LazyListScope.notificationRows(name: (String) -> String) {
+    item { Subheading("NOTIFICATIONS AND USB") }
+    item { KeyValueWeighted("Ongoing notification", ContextualRules.StickyNotificationBoost) }
     item {
-        Panel {
-            Text(text = "DORMANCY RAMPS", style = HeaderStyle, modifier = Modifier.padding(bottom = 6.dp))
-            ContextualRules.ramps.forEach { ramp ->
-                Text(text = name(ramp.packageName), style = ValueStyle)
-                KeyValueWeighted("Before day ${ramp.startDay}", ramp.floor)
-                KeyValueWeighted("From day ${ramp.peakDay}", ramp.peakScore)
-            }
-        }
+        KeyValueWeighted(
+            "Ordinary notification, apps a rule names",
+            ContextualRules.RegularNotificationBoost,
+        )
     }
-
     item {
-        Panel {
-            Text(
-                text = "RECONCILIATION, FROM DAY ${ContextualRules.ReconciliationDay}",
-                style = HeaderStyle,
-                modifier = Modifier.padding(bottom = 6.dp),
-            )
-            ContextualRules.reconciliation.forEach { (target, weight) ->
-                KeyValueWeighted(name(target), weight)
-            }
-            KeyValueWeighted(
-                "${name(ContextualRules.UsbSettingsTarget)}, plugged into a computer",
-                ContextualRules.UsbSettingsBoost,
-            )
-            KeyValueWeighted("Ongoing notification", ContextualRules.StickyNotificationBoost)
-            KeyValueWeighted("Ordinary notification, apps a rule already names", ContextualRules.RegularNotificationBoost)
-        }
+        KeyValueWeighted(
+            "${name(ContextualRules.UsbSettingsTarget)}, plugged into a computer",
+            ContextualRules.UsbSettingsBoost,
+        )
+    }
+}
+
+@Composable
+private fun Subheading(text: String) {
+    Text(
+        text = text,
+        style = HeaderStyle.copy(color = NoteStyle.color),
+        modifier = Modifier.padding(top = 20.dp, bottom = 10.dp),
+    )
+}
+
+/** A weighted row that also carries the window the weight applies for. */
+@Composable
+private fun KeyValueWeightedRow(key: String, weight: Int, trailing: String) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 3.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        Text(text = key, style = BodyStyle, modifier = Modifier.weight(1f))
+        Text(text = signed(weight), style = ValueStyle.copy(color = weightColour(weight)))
+        Text(text = trailing, style = NoteStyle, modifier = Modifier.width(38.dp))
     }
 }
 
@@ -284,7 +354,7 @@ private fun KeyValueWeighted(key: String, weight: Int) {
 
 private fun signed(weight: Int) = if (weight > 0) "+$weight" else "$weight"
 
-private fun weightColour(weight: Int) = if (weight < 0) Color(0xFFCE8B7F) else Color(0xFF9FC9A6)
+private fun weightColour(weight: Int) = if (weight < 0) Dead else Live
 
 private fun short(duration: Duration): String {
     val minutes = duration.toMinutes()

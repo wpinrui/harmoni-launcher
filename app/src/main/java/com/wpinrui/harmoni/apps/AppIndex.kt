@@ -59,10 +59,6 @@ class AppIndex(context: Context) {
         rescan()
     }
 
-    fun stop() {
-        launcherApps.unregisterCallback(callback)
-    }
-
     private fun rescan() {
         _entries.value = userManager.userProfiles
             .flatMap { user -> activitiesFor(user).map { it.toEntry(user) } }
