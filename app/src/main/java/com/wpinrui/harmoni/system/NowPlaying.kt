@@ -6,9 +6,12 @@ import android.media.MediaMetadata
 import android.media.session.MediaController
 import android.media.session.MediaSessionManager
 import android.media.session.PlaybackState
+import android.util.Log
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.State
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.platform.LocalContext
@@ -33,8 +36,16 @@ data class NowPlaying(val title: String, val artist: String?) {
 fun rememberNowPlaying(): State<NowPlaying?> {
     val context = LocalContext.current
     val playing = remember { mutableStateOf<NowPlaying?>(null) }
+    val connected by NotificationAccess.connected.collectAsState()
 
-    DisposableEffect(context) {
+    // Keyed on the bind, not just on the context: the listener is bound a moment after the
+    // process starts, so a one-shot attempt at first composition always lost the race.
+    DisposableEffect(context, connected) {
+        if (!connected) {
+            playing.value = null
+            return@DisposableEffect onDispose { }
+        }
+
         val listenerComponent = ComponentName(context, HarmoniNotificationListener::class.java)
         val sessions = context.getSystemService(MediaSessionManager::class.java)
 
@@ -44,7 +55,9 @@ fun rememberNowPlaying(): State<NowPlaying?> {
         val callbacks = mutableMapOf<MediaController, MediaController.Callback>()
 
         fun publish() {
-            playing.value = controllers.firstNotNullOfOrNull { it.nowPlayingOrNull() }
+            val current = controllers.firstNotNullOfOrNull { it.nowPlayingOrNull() }
+            Log.d(TAG, "Now playing: ${current?.line ?: "nothing"}")
+            playing.value = current
         }
 
         fun rebind(active: List<MediaController>) {
@@ -66,13 +79,19 @@ fun rememberNowPlaying(): State<NowPlaying?> {
             rebind(active.orEmpty())
         }
 
-        val granted = runCatching {
+        var listening = false
+        try {
             sessions.addOnActiveSessionsChangedListener(onSessionsChanged, listenerComponent)
+            listening = true
             rebind(sessions.getActiveSessions(listenerComponent))
-        }.isSuccess
+        } catch (e: SecurityException) {
+            // Worth seeing rather than swallowing: it means the bind is not usable yet, and the
+            // music element will sit idle until the next connection event brings us back here.
+            Log.w(TAG, "Cannot read media sessions despite a bound listener", e)
+        }
 
         onDispose {
-            if (granted) sessions.removeOnActiveSessionsChangedListener(onSessionsChanged)
+            if (listening) sessions.removeOnActiveSessionsChangedListener(onSessionsChanged)
             callbacks.forEach { (controller, callback) -> controller.unregisterCallback(callback) }
         }
     }
@@ -86,3 +105,5 @@ private fun MediaController.nowPlayingOrNull(): NowPlaying? {
         ?: return null
     return NowPlaying(title, metadata?.getString(MediaMetadata.METADATA_KEY_ARTIST))
 }
+
+private const val TAG = "NowPlaying"
