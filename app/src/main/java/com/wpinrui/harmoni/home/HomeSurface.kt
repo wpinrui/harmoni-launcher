@@ -14,5 +14,7 @@ import androidx.compose.ui.Modifier
  */
 @Composable
 fun HomeSurface(modifier: Modifier = Modifier) {
-    Box(modifier = modifier.fillMaxSize())
+    Box(modifier = modifier.fillMaxSize()) {
+        ClockBlock()
+    }
 }
