@@ -12,8 +12,12 @@ and three gestures on the empty space around it.
 
 ## Status
 
-Early. The shell is in place: Harmoni can be set as the home app, draws an empty surface over the
-wallpaper, and keeps a live index of installed apps. Nothing is drawn on that surface yet.
+Early. Harmoni can be set as the home app and draws the clock block over the wallpaper: time,
+date, battery, notification badges, the music element and the YouTube link. The gestures are not
+built yet, so tapping the empty surface does nothing.
+
+Badge counts and now-playing text need notification access, granted by hand under Settings,
+Notifications, Device and app notifications.
 
 ## Requirements
 

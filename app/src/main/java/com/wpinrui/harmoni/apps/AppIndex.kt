@@ -50,6 +50,10 @@ class AppIndex(context: Context) {
         ) = rescan()
     }
 
+    /** The main entry for a package, on the current profile ordering. */
+    fun firstFor(packageName: String): AppEntry? =
+        entries.value.firstOrNull { it.packageName == packageName }
+
     fun start() {
         launcherApps.registerCallback(callback)
         rescan()

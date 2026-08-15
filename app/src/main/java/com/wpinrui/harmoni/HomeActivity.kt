@@ -7,6 +7,8 @@ import androidx.activity.SystemBarStyle
 import androidx.activity.addCallback
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import com.wpinrui.harmoni.home.HomeSurface
 import com.wpinrui.harmoni.ui.theme.HarmoniTheme
 
@@ -26,6 +28,13 @@ class HomeActivity : ComponentActivity() {
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
         super.onCreate(savedInstanceState)
+
+        // The block already shows the time and the battery, so the status bar would only repeat
+        // them over the wallpaper. It stays available on a swipe from the top edge.
+        WindowInsetsControllerCompat(window, window.decorView).apply {
+            hide(WindowInsetsCompat.Type.statusBars())
+            systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        }
 
         setContent {
             HarmoniTheme {

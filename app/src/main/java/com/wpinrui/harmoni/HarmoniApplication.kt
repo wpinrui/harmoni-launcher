@@ -1,6 +1,7 @@
 package com.wpinrui.harmoni
 
 import android.app.Application
+import android.content.Context
 import com.wpinrui.harmoni.apps.AppIndex
 import com.wpinrui.harmoni.apps.IconResolver
 import com.wpinrui.harmoni.apps.SystemIconResolver
@@ -26,3 +27,6 @@ class HarmoniApplication : Application() {
         iconResolver = SystemIconResolver(this)
     }
 }
+
+/** The shared index and icon resolver, reachable from anywhere holding a [Context]. */
+val Context.harmoni: HarmoniApplication get() = applicationContext as HarmoniApplication
