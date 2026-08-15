@@ -48,6 +48,20 @@ adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 Then choose Harmoni under Settings, Apps, Default apps, Home app.
 
+## Credits
+
+Badge icons from [Flaticon](https://www.flaticon.com), used under the Flaticon free licence:
+
+- [Telegram icons](https://www.flaticon.com/free-icons/telegram) created by Magnific
+- [WhatsApp icons](https://www.flaticon.com/free-icons/whatsapp) created by Fathema Khanom
+- [Instagram icons](https://www.flaticon.com/free-icons/instagram) created by Grow studio
+
+Type is [Karla](https://github.com/googlefonts/karla) by the Karla Project Authors, under the SIL
+Open Font License. Full text in [licenses/Karla-OFL.txt](licenses/Karla-OFL.txt).
+
+These credits also have to appear on the launcher app screen, tracked in
+[#6](https://github.com/wpinrui/harmoni-launcher/issues/6).
+
 ## Checks
 
 ```
