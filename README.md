@@ -13,25 +13,36 @@ and three gestures on the empty space around it.
 ## Status
 
 Early. Harmoni can be set as the home app and draws the clock block over the wallpaper: time,
-date, battery, notification badges, the music element and the YouTube link. Tapping the empty
-surface summons the ring of eight, which picks on the next tap and dismisses on the centre or
-anywhere outside. Long press summons the contextual ring instead. Touch near an edge and the ring
-centres itself at the closest point that still fits, rather than being refused. Double tap opens
-every installed app. Drawing a letter opens the same view
-filtered by it, and further letters are drawn in the space below the grid, with a right to left
-swipe to erase.
+date, battery, notification badges, the music element and the YouTube link. The time opens the
+clock, the date opens the calendar at today, and the battery opens battery settings.
+
+On the empty surface:
+
+- Tap summons the ring of eight, which picks on the next tap and dismisses on the centre or
+  anywhere outside. Touch near an edge and the ring centres itself at the closest point that still
+  fits, rather than being refused.
+- Long press summons the contextual ring instead.
+- Double tap opens every installed app.
+- Drawing a letter in the lower half opens the same view filtered by it. Further letters are drawn
+  in the space below the grid, with a right to left swipe to erase. Holding an icon there opens
+  that app's page in Settings.
+- Swiping down in the upper half opens the notification shade.
+- Swiping up, with one finger or two, runs whichever app shortcut is bound to it.
 
 Badge counts and now-playing text need notification access, granted by hand under Settings,
-Notifications, Device and app notifications.
+Notifications, Device and app notifications. The shade needs accessibility access, under Settings,
+Accessibility. Harmoni's accessibility service takes no events and cannot read screen content; its
+only capability is the action that opens the shade.
 
 Opening Harmoni from the app list gives the launcher app screen: the ring bindings, hidden apps,
 the alphabet chart, permission health, the contextual rules as written, diagnostics and build
 info. The rules and the diagnostics are read-only; the ring bindings and the hidden list are not.
 
-Any ring position can be bound to another app, or reset to the one in source. Hidden apps never
-appear anywhere Harmoni offers an app, and a position holding one is left blank rather than
-closing the gap. Both save on the tap and take effect the next time you come home, which is when
-Harmoni restarts to pick them up.
+Any ring position can be bound to another app, or reset to the one in source. Either swipe up can
+be bound to an app shortcut, the kind other launchers show on a long press of an icon. Hidden apps
+never appear anywhere Harmoni offers an app, and a ring position holding one is left blank rather
+than closing the gap. All of it saves on the tap and takes effect the next time you come home,
+which is when Harmoni restarts to pick it up.
 
 ## Graffiti alphabet
 

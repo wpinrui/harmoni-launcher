@@ -9,6 +9,8 @@ import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerId
 import androidx.compose.ui.input.pointer.PointerInputChange
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.dp
+import kotlin.math.abs
 import kotlinx.coroutines.withTimeoutOrNull
 
 /**
@@ -30,6 +32,12 @@ sealed interface HomeGesture {
 
     /** Moved beyond touch slop: a Graffiti stroke, from first point to last. */
     data class Stroke(val points: List<Offset>) : HomeGesture
+
+    /** A straight run upward with one finger: whatever shortcut is bound to it. */
+    data object SwipeUp : HomeGesture
+
+    /** The same with two fingers down at any point during it. */
+    data object TwoFingerSwipeUp : HomeGesture
 }
 
 /**
@@ -45,6 +53,7 @@ fun Modifier.homeGestures(onGesture: (HomeGesture) -> Unit): Modifier = pointerI
     // gesture whose whole job is to be quick.
     val longPressTimeout = viewConfiguration.longPressTimeoutMillis * 2 / 3
     val doubleTapTimeout = viewConfiguration.doubleTapTimeoutMillis
+    val swipeTravel = SwipeUpTravel.toPx()
 
     // Both halves of a double tap are seen by this one handler, so nothing that appears in
     // between, the ring above all, can take the second one off it.
@@ -52,7 +61,7 @@ fun Modifier.homeGestures(onGesture: (HomeGesture) -> Unit): Modifier = pointerI
     var lastTapPosition = Offset.Unspecified
 
     awaitEachGesture {
-        awaitHomeGesture(touchSlop, longPressTimeout) { gesture ->
+        awaitHomeGesture(touchSlop, longPressTimeout, swipeTravel) { gesture ->
             if (gesture !is HomeGesture.Tap) {
                 lastTapAt = 0L
                 onGesture(gesture)
@@ -93,6 +102,7 @@ private val doubleTapSlop = 96f
 private suspend fun AwaitPointerEventScope.awaitHomeGesture(
     touchSlop: Float,
     longPressTimeout: Long,
+    swipeTravel: Float,
     emit: (HomeGesture) -> Unit,
 ) {
     val down = awaitFirstDown(requireUnconsumed = true)
@@ -100,11 +110,15 @@ private suspend fun AwaitPointerEventScope.awaitHomeGesture(
     var moved = false
     var released = false
 
+    // Counted across the whole gesture rather than sampled at the end, since the second finger
+    // usually lifts first and the count would be back to one by the time anything is decided.
+    var fingers = 1
+
     // The long-press window decides between the two still gestures. Moving inside it means the
     // touch was never still, so it is a stroke regardless of how long the finger stays down.
     val settled = withTimeoutOrNull(longPressTimeout) {
         while (true) {
-            val change = currentEvent(down.id) ?: break
+            val change = nextChange(down.id) { fingers = maxOf(fingers, it) } ?: break
             path += change.trail()
             if (!change.pressed) {
                 released = true
@@ -129,17 +143,76 @@ private suspend fun AwaitPointerEventScope.awaitHomeGesture(
 
         else -> {
             while (!released) {
-                val change = currentEvent(down.id) ?: break
+                val change = nextChange(down.id) { fingers = maxOf(fingers, it) } ?: break
                 path += change.trail()
                 if (!change.pressed) released = true
             }
-            emit(HomeGesture.Stroke(path.toList()))
+
+            val points = path.toList()
+            val swipedUp = isSwipeUp(points, swipeTravel)
+
+            when {
+                fingers >= 2 && swipedUp -> emit(HomeGesture.TwoFingerSwipeUp)
+                // Two fingers doing anything else is not a letter. Nobody writes with two.
+                fingers >= 2 -> Unit
+                swipedUp -> emit(HomeGesture.SwipeUp)
+                else -> emit(HomeGesture.Stroke(points))
+            }
         }
     }
 }
 
-private suspend fun AwaitPointerEventScope.currentEvent(id: PointerId) =
-    awaitPointerEvent().changes.firstOrNull { it.id == id }
+private fun isSwipeUp(points: List<Offset>, minimumTravel: Float) =
+    isStraightSwipe(points, minimumTravel, downward = false)
+
+/**
+ * Whether the path was a deliberate run along one axis rather than a letter.
+ *
+ * Straightness is what separates an upward swipe from a letter, and by a wide margin: measured
+ * over the captured alphabet, every letter that ends above where it started is an arch or a curve
+ * and scores 0.34 or below.
+ *
+ * Downward is a different matter, since i is a straight vertical at 0.99, so nothing here can tell
+ * the two apart. Where the stroke starts is what settles that, and the surface decides it.
+ */
+internal fun isStraightSwipe(
+    points: List<Offset>,
+    minimumTravel: Float,
+    downward: Boolean,
+): Boolean {
+    if (points.size < 2) return false
+
+    val delta = points.last() - points.first()
+    if (if (downward) delta.y <= 0f else delta.y >= 0f) return false
+
+    val direct = delta.getDistance()
+    if (direct < minimumTravel) return false
+    if (abs(delta.y) < VerticalBias * abs(delta.x)) return false
+
+    val travelled = points.zipWithNext().fold(0f) { total, (a, b) -> total + (b - a).getDistance() }
+    return travelled > 0f && direct / travelled >= Straightness
+}
+
+/** Far enough that it cannot be a flick, short enough to stay inside the surface. */
+internal val SwipeTravel = 72.dp
+
+private val SwipeUpTravel = SwipeTravel
+private const val VerticalBias = 2f
+private const val Straightness = 0.85f
+
+/**
+ * The first pointer's change from the next event, reporting how many fingers that event carried.
+ *
+ * Null once that pointer is gone from the stream, which is what ends every loop here.
+ */
+private suspend inline fun AwaitPointerEventScope.nextChange(
+    id: PointerId,
+    onFingers: (Int) -> Unit,
+): PointerInputChange? {
+    val event = awaitPointerEvent()
+    onFingers(event.changes.count { it.pressed })
+    return event.changes.firstOrNull { it.id == id }
+}
 
 /**
  * Every position this change carries, not just the latest.
@@ -153,7 +226,7 @@ private fun PointerInputChange.trail(): List<Offset> =
 
 private suspend fun AwaitPointerEventScope.awaitRelease(id: PointerId) {
     while (true) {
-        val change = currentEvent(id) ?: return
+        val change = nextChange(id) {} ?: return
         if (!change.pressed) return
     }
 }

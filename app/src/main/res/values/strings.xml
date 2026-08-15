@@ -3,4 +3,5 @@
     <string name="app_name">Harmoni</string>
     <string name="graffiti_capture">Graffiti Setup</string>
     <string name="hidden_apps">Hidden Apps</string>
+    <string name="accessibility_description">Lets a swipe down on the home surface open the notification shade. Harmoni does not read screen content.</string>
 </resources>

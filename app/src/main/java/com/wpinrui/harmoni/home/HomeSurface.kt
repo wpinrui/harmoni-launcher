@@ -26,6 +26,9 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.platform.LocalViewConfiguration
 import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.search.SearchSurface
+import com.wpinrui.harmoni.shortcuts.GestureBindings
+import com.wpinrui.harmoni.shortcuts.ShortcutGesture
+import com.wpinrui.harmoni.system.NotificationShade
 
 /**
  * The surface the rest of the launcher is built on.
@@ -48,6 +51,7 @@ fun HomeSurface(modifier: Modifier = Modifier) {
     val contextual = remember(context) { ContextualRing(context) }
     val alphabet by context.harmoni.graffiti.collectAsState()
     val haptics = LocalHapticFeedback.current
+    val swipeTravel = with(density) { SwipeTravel.toPx() }
 
     val entries by context.harmoni.appIndex.entries.collectAsState()
     val overrides by RingSlots.overrides.collectAsState()
@@ -100,17 +104,41 @@ fun HomeSurface(modifier: Modifier = Modifier) {
                         haptics.performHapticFeedback(HapticFeedbackType.LongPress)
                     }
 
+                    is HomeGesture.SwipeUp ->
+                        GestureBindings.start(context, ShortcutGesture.SWIPE_UP)
+
+                    is HomeGesture.TwoFingerSwipeUp ->
+                        GestureBindings.start(context, ShortcutGesture.TWO_FINGER_SWIPE_UP)
+
                     // Section 4 opens the search view on the first stroke, carrying that letter.
                     // A stroke that matches nothing is left alone: opening an empty search would
                     // put the whole surface behind a scrim for what was probably a stray swipe.
                     is HomeGesture.Stroke -> {
-                        val match = alphabet.recognise(gesture.points)
-                        if (match == null) {
-                            Log.d(TAG, "Stroke of ${gesture.points.size} points matched no letter")
-                        } else {
-                            ringCentre = null
-                            searchQuery = match.letter.toString()
-                            searchOpen = true
+                        val start = gesture.points.firstOrNull()
+
+                        when {
+                            start == null -> Unit
+
+                            // Above the writing area, a straight run downward is the shade. Shape
+                            // alone cannot tell it from the letter i, which is also a straight
+                            // vertical; where it started is what separates them.
+                            start.y < surface.height * GraffitiTop ->
+                                if (isStraightSwipe(gesture.points, swipeTravel, downward = true)) {
+                                    NotificationShade.expand(context)
+                                } else {
+                                    Log.d(TAG, "Stroke above the input area, ignored")
+                                }
+
+                            else -> {
+                                val match = alphabet.recognise(gesture.points)
+                                if (match == null) {
+                                    Log.d(TAG, "Stroke of ${gesture.points.size} points matched no letter")
+                                } else {
+                                    ringCentre = null
+                                    searchQuery = match.letter.toString()
+                                    searchOpen = true
+                                }
+                            }
                         }
                     }
                 }
@@ -149,3 +177,16 @@ fun HomeSurface(modifier: Modifier = Modifier) {
 }
 
 private const val TAG = "HomeSurface"
+
+/**
+ * Where the Graffiti area starts, as a fraction of the surface.
+ *
+ * The same place the search view puts it: measured down that layout, the query line, the result
+ * count, the 4x2 grid and the page dots come to just under half the height, so a stroke drawn on
+ * the bare wallpaper registers exactly where it would once the view is open. Nothing marks it,
+ * because nothing marks it there either.
+ *
+ * Only the stroke's first point is tested. A letter that runs up out of the area is still a letter;
+ * one that starts above it was never aimed at the input.
+ */
+private const val GraffitiTop = 0.5f

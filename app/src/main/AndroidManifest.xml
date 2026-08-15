@@ -32,6 +32,13 @@
         android:name="android.permission.MANAGE_EXTERNAL_STORAGE"
         tools:ignore="ScopedStorage" />
 
+    <!--
+        The undocumented route to the notification shade, tried before the accessibility service.
+        An ordinary permission; whether the hidden method behind it is reachable is up to the
+        device rather than the grant.
+    -->
+    <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />
@@ -110,6 +117,23 @@
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
+        </service>
+
+        <!--
+            Bound once accessibility access is granted by hand. It exists only to open the
+            notification shade, which no app can do any other supported way.
+        -->
+        <service
+            android:name=".system.HarmoniAccessibilityService"
+            android:exported="false"
+            android:label="@string/app_name"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service" />
         </service>
 
         <!-- Activity recognition delivers its results to a broadcast, not a callback. -->

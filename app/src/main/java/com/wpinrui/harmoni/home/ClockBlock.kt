@@ -1,7 +1,10 @@
 package com.wpinrui.harmoni.home
 
+import android.content.Intent
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.provider.AlarmClock
+import android.provider.CalendarContract
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
@@ -125,6 +128,10 @@ private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
     }
     val dateFormat = remember { DateTimeFormatter.ofPattern("EEE d MMM", Locale.getDefault()) }
 
+    val context = LocalContext.current
+
+    // Each element opens what it is about. The shadow pass takes no touches, so a tap always
+    // lands on the element you can read rather than the one drawn underneath it.
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             text = state.time.format(timeFormat),
@@ -134,17 +141,23 @@ private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
                 .offset(x = (-5).dp)
                 // At 80sp the same shadow that makes 11sp legible reads as a smear, so the
                 // clock's share of the silhouette is dialled back.
-                .alpha(if (shadowPass) ClockShadowShare else 1f),
+                .alpha(if (shadowPass) ClockShadowShare else 1f)
+                .tappable(!shadowPass) { context.launchOrLog(clockIntent(), "the clock") },
             style = ClockStyle,
         )
 
         Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Text(
                 text = state.time.format(dateFormat).uppercase(Locale.getDefault()),
+                modifier = Modifier.tappable(!shadowPass) {
+                    context.launchOrLog(calendarIntent(), "the calendar")
+                },
                 style = CapsStyle,
             )
             Row(
-                modifier = Modifier.padding(top = 11.dp),
+                modifier = Modifier
+                    .padding(top = 11.dp)
+                    .tappable(!shadowPass) { context.launchOrLog(batteryIntent(), "battery settings") },
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -154,6 +167,20 @@ private fun TimeAndStatus(state: BlockState, shadowPass: Boolean) {
         }
     }
 }
+
+/** The alarms screen, which is the standard way to ask for whatever clock app is installed. */
+private fun clockIntent() = Intent(AlarmClock.ACTION_SHOW_ALARMS)
+
+/** Addressed by instant rather than by package, so it opens on today in whichever calendar. */
+private fun calendarIntent(): Intent {
+    val today = CalendarContract.CONTENT_URI.buildUpon()
+        .appendPath("time")
+        .appendPath(System.currentTimeMillis().toString())
+        .build()
+    return Intent(Intent.ACTION_VIEW, today)
+}
+
+private fun batteryIntent() = Intent(Intent.ACTION_POWER_USAGE_SUMMARY)
 
 @Composable
 private fun Badges(counts: Map<String, Int>, shadowPass: Boolean) {
