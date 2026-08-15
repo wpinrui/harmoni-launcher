@@ -122,6 +122,16 @@ fun GraffitiCaptureScreen() {
             },
         )
 
+        if (forLetter.isNotEmpty()) {
+            ClearLetter(
+                letter = letter,
+                onClear = {
+                    samples = samples.filterNot { it.letter == letter }
+                    revision++
+                },
+            )
+        }
+
         DrawArea(
             letter = letter,
             enabled = !full,
@@ -237,6 +247,31 @@ private fun SampleSlots(samples: List<GraffitiSample>, onDelete: (Int) -> Unit) 
                 }
             }
         }
+    }
+}
+
+/**
+ * Bins every sample for the current letter.
+ *
+ * Reshaping a letter that turned out too close to its neighbours means replacing all five, and
+ * doing that one slot at a time is five taps to get to the part that matters.
+ */
+@Composable
+private fun ClearLetter(letter: Char, onClear: () -> Unit) {
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 20.dp),
+        contentAlignment = Alignment.CenterEnd,
+    ) {
+        Text(
+            text = "REDRAW ALL OF ${letter.uppercase()}",
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .noRipple(enabled = true, onClick = onClear)
+                .padding(horizontal = 10.dp, vertical = 6.dp),
+            style = MetaStyle.copy(color = StartDot),
+        )
     }
 }
 

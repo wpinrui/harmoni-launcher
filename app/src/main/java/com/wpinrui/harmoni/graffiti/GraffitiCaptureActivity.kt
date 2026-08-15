@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import com.wpinrui.harmoni.harmoni
 import com.wpinrui.harmoni.ui.theme.HarmoniTheme
 
 /**
@@ -29,5 +30,14 @@ class GraffitiCaptureActivity : ComponentActivity() {
                 GraffitiCaptureScreen()
             }
         }
+    }
+
+    /**
+     * On the way out rather than after each stroke: parsing the whole alphabet 130 times during a
+     * capture would be wasted work, and nothing reads the templates while this screen is up.
+     */
+    override fun onStop() {
+        super.onStop()
+        harmoni.reloadGraffiti()
     }
 }

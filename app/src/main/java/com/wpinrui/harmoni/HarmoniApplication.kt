@@ -46,6 +46,16 @@ class HarmoniApplication : Application() {
      */
     val graffiti: StateFlow<GraffitiAlphabet> = _graffiti.asStateFlow()
 
+    /**
+     * Picks up letters redrawn since the process started.
+     *
+     * The launcher process outlives every other screen, so without this a recapture would not take
+     * effect until something killed it, which for the home app is nothing short of a reboot.
+     */
+    fun reloadGraffiti() {
+        CoroutineScope(Dispatchers.Default).launch { _graffiti.value = GraffitiAlphabet.load(this@HarmoniApplication) }
+    }
+
     override fun onCreate() {
         super.onCreate()
         appIndex = AppIndex(this).apply { start() }
