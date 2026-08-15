@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
@@ -75,7 +76,9 @@ private fun TimeAndStatus() {
     Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
         Text(
             text = time.format(timeFormat),
-            modifier = Modifier.padding(start = (-5).dp),
+            // The mockup pulls the clock 5px left off the block's edge. Compose rejects negative
+            // padding, so the nudge is an offset.
+            modifier = Modifier.offset(x = (-5).dp),
             style = TextStyle(
                 fontFamily = Karla,
                 fontWeight = FontWeight.ExtraLight,
@@ -144,7 +147,7 @@ private fun MusicAndLink() {
     val context = LocalContext.current
     val nowPlaying by rememberNowPlaying()
 
-    Column(modifier = Modifier.padding(vertical = (-9).dp)) {
+    Column(modifier = Modifier.offset(y = (-9).dp)) {
         Row(
             modifier = Modifier
                 .tappable { context.launchApp(HomeBindings.YOUTUBE_MUSIC) }
