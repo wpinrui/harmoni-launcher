@@ -31,7 +31,7 @@ import com.wpinrui.harmoni.search.SearchSurface
 import com.wpinrui.harmoni.shortcuts.GestureBindings
 import com.wpinrui.harmoni.shortcuts.ShortcutGesture
 import com.wpinrui.harmoni.system.NotificationShade
-import com.wpinrui.harmoni.system.confirmShortcut
+import com.wpinrui.harmoni.system.buzzShortcutStarted
 import kotlinx.coroutines.delay
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.getValue
@@ -243,7 +243,7 @@ private fun handleStroke(
  * telling the finger something happened when nothing did.
  */
 private fun runShortcut(context: Context, gesture: ShortcutGesture) {
-    if (GestureBindings.start(context, gesture)) context.confirmShortcut()
+    if (GestureBindings.start(context, gesture)) context.buzzShortcutStarted()
 }
 
 private fun SurfaceState.centre(position: Offset) = RingPlacement.clamp(position, surface, density)

@@ -78,10 +78,11 @@ object AppShortcuts {
     }
 
     /**
-     * True when the shortcut actually started.
+     * True when the system accepted the start, which is as much as the call can report.
      *
-     * False, and nothing louder than a log, if it has since been withdrawn: an app is free to
-     * stop publishing one, and a binding outlives it.
+     * False, and nothing louder than a log, when it cannot be started. The usual reason is that
+     * the shortcut has since been withdrawn, an app being free to stop publishing one while a
+     * binding outlives it; not being the active home app throws here too.
      */
     fun start(
         context: Context,
