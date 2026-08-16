@@ -188,10 +188,10 @@ private fun handle(
 
         is HomeGesture.DoubleTap -> onSearch("")
 
-        is HomeGesture.SwipeUp -> GestureBindings.start(context, ShortcutGesture.SWIPE_UP)
+        is HomeGesture.SwipeUp -> state.runShortcut(context, ShortcutGesture.SWIPE_UP)
 
         is HomeGesture.TwoFingerSwipeUp ->
-            GestureBindings.start(context, ShortcutGesture.TWO_FINGER_SWIPE_UP)
+            state.runShortcut(context, ShortcutGesture.TWO_FINGER_SWIPE_UP)
 
         is HomeGesture.Stroke -> handleStroke(gesture.points, state, context, onSearch)
     }
@@ -232,6 +232,19 @@ private fun handleStroke(
     }
 
     onSearch(match.letter.toString())
+}
+
+/**
+ * Runs whatever is bound to [gesture], and confirms it in the hand.
+ *
+ * Only when something actually started. A swipe up that is bound to nothing, or to a shortcut
+ * the app has since withdrawn, leaves the screen exactly as it was, and a buzz there would be
+ * telling the finger something happened when nothing did.
+ */
+private fun SurfaceState.runShortcut(context: Context, gesture: ShortcutGesture) {
+    if (GestureBindings.start(context, gesture)) {
+        haptics.performHapticFeedback(HapticFeedbackType.Confirm)
+    }
 }
 
 private fun SurfaceState.centre(position: Offset) = RingPlacement.clamp(position, surface, density)
