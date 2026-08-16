@@ -15,14 +15,15 @@ import android.os.VibratorManager
  *
  * This addresses the vibrator directly so the length is ours to set. Declaring the usage as touch
  * keeps it tied to the same system setting the rings obey, so turning haptics off silences all
- * three; the cost is that the device scales the amplitude, which is why the length rather than the
- * strength is what carries it.
+ * three. The device may then scale the amplitude down to the haptic feedback intensity, which
+ * would leave the length rather than the strength carrying it; that part is assumed from the
+ * usage contract and has not been measured on the device.
  */
 fun Context.buzzShortcutStarted() {
     val vibrator = getSystemService(VibratorManager::class.java)?.defaultVibrator ?: return
     if (!vibrator.hasVibrator()) return
 
-    // Two gestures inside the window should read as two buzzes rather than one long one.
+    // Stops the previous buzz so a second gesture inside the window starts from silence.
     vibrator.cancel()
     vibrator.vibrate(
         VibrationEffect.createOneShot(ShortcutMillis, ShortcutAmplitude),
