@@ -77,12 +77,24 @@ object AppShortcuts {
         }.getOrNull()
     }
 
-    /** Does nothing louder than a log if the shortcut has since been withdrawn. */
-    fun start(context: Context, packageName: String, id: String, user: UserHandle = Process.myUserHandle()) {
+    /**
+     * True when the system accepted the start, which is as much as the call can report.
+     *
+     * False, and nothing louder than a log, when it cannot be started. The usual reason is that
+     * the shortcut has since been withdrawn, an app being free to stop publishing one while a
+     * binding outlives it; not being the active home app throws here too.
+     */
+    fun start(
+        context: Context,
+        packageName: String,
+        id: String,
+        user: UserHandle = Process.myUserHandle(),
+    ): Boolean {
         val launcherApps = context.getSystemService(LauncherApps::class.java)
 
-        runCatching { launcherApps.startShortcut(packageName, id, null, null, user) }
+        return runCatching { launcherApps.startShortcut(packageName, id, null, null, user) }
             .onFailure { Log.w(TAG, "Cannot start $packageName/$id", it) }
+            .isSuccess
     }
 
     private fun ShortcutInfo.toAppShortcut(

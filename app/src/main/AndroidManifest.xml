@@ -39,6 +39,12 @@
     -->
     <uses-permission android:name="android.permission.EXPAND_STATUS_BAR" />
 
+    <!--
+        The shortcut gestures address the vibrator directly rather than through the framework's
+        stock ticks, which are too light to feel as the launched app takes the screen.
+    -->
+    <uses-permission android:name="android.permission.VIBRATE" />
+
     <queries>
         <intent>
             <action android:name="android.intent.action.MAIN" />

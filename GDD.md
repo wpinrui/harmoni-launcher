@@ -210,6 +210,10 @@ Both are bound from the launcher app screen, from a flat list of every shortcut 
 device. Reading that list requires Harmoni to be the active home app; the system refuses it to
 anything else.
 
+A gesture that starts something buzzes, longer than either ring's tick because the launched app
+is already taking the screen. One bound to nothing, or to a shortcut the publishing app has
+since withdrawn, is silent.
+
 Swipe down in the upper half opens the notification shade. Android has no supported way for an app
 to do this other than an accessibility service, so Harmoni ships one whose entire capability is
 that single global action: it takes no events and cannot read screen content. That service is

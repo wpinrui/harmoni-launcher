@@ -133,7 +133,7 @@ Then choose Harmoni under Settings, Apps, Default apps, Home app.
 | `app/src/main/java/com/wpinrui/harmoni/app/` | The launcher app screen and its pickers |
 | `app/src/main/java/com/wpinrui/harmoni/apps/` | The installed-app index, icons and the hidden list |
 | `app/src/main/java/com/wpinrui/harmoni/shortcuts/` | App shortcut querying and gesture bindings |
-| `app/src/main/java/com/wpinrui/harmoni/system/` | Notifications, media sessions, clock and battery, accessibility |
+| `app/src/main/java/com/wpinrui/harmoni/system/` | Notifications, media sessions, clock and battery, accessibility, the shortcut buzz |
 | `app/src/main/java/com/wpinrui/harmoni/settings/` | The one shared-preferences accessor every store uses |
 | `app/src/main/java/com/wpinrui/harmoni/diagnostics/` | Diagnostic counters |
 | `app/src/main/java/com/wpinrui/harmoni/ui/theme/` | Colours, type and the shared no-ripple modifier |

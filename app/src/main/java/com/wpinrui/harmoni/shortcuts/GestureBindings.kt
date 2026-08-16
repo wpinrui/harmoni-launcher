@@ -84,8 +84,9 @@ object GestureBindings {
         SettingsRestart.mark()
     }
 
-    fun start(context: Context, gesture: ShortcutGesture) {
-        val bound = _bindings.value[gesture] ?: return
-        AppShortcuts.start(context, bound.packageName, bound.id)
+    /** True when something was bound to [gesture] and it started. */
+    fun start(context: Context, gesture: ShortcutGesture): Boolean {
+        val bound = _bindings.value[gesture] ?: return false
+        return AppShortcuts.start(context, bound.packageName, bound.id)
     }
 }
